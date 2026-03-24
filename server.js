@@ -4058,20 +4058,29 @@ app.use((req, res) => {
   return sendNotFoundPage(res);
 });
 
-if (!process.env.VERCEL) {
-  ensureStore().catch((error) => {
-    console.error("Store init failed:", error.message);
-  });
-
-  app.listen(port, () => {
-    console.log(`DearFutureMe server running at ${appBaseUrl}`);
-  });
-
-  setInterval(() => {
-    deliverDueCapsules().catch((error) => {
-      console.error("Email delivery failed:", error.message);
+  if (!process.env.VERCEL) {
+    ensureStore().catch((error) => {
+      console.error("Store init failed:", error.message);
     });
-  }, 60000);
+
+    app.listen(port, () => {
+      console.log(`DearFutureMe server running at ${appBaseUrl}`);
+    });
+
+    autoEndMaintenanceIfNeeded().catch((error) => {
+      console.error("Auto maintenance check failed:", error.message);
+    });
+    setInterval(() => {
+      autoEndMaintenanceIfNeeded().catch((error) => {
+        console.error("Auto maintenance check failed:", error.message);
+      });
+    }, 60000);
+
+    setInterval(() => {
+      deliverDueCapsules().catch((error) => {
+        console.error("Email delivery failed:", error.message);
+      });
+    }, 60000);
 
   setInterval(() => {
     sendDailyReminders().catch((error) => {

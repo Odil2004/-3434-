@@ -232,7 +232,7 @@
   </main>
 
   <footer>
-    <span class="footer-left">© 2025 dearfutureme.com</span>
+    <span class="footer-left">© <span id="footer-year"></span> dearfutureme.com</span>
     <div class="footer-right">
       <a href="/">Главная</a>
     </div>
@@ -252,6 +252,10 @@
           }
         }
       } catch(e) {}
+    })();
+    (function() {
+      var y = document.getElementById('footer-year');
+      if (y) y.textContent = new Date().getFullYear();
     })();
   </script>
 

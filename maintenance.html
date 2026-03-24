@@ -391,7 +391,7 @@
 
   <!-- FOOTER -->
   <footer>
-    <span class="footer-copy">© 2025 dearfutureme.com</span>
+    <span class="footer-copy">© <span id="footer-year"></span> dearfutureme.com</span>
   </footer>
 
   <script>
@@ -399,6 +399,10 @@
   </script>
 
   <script>
+    (function(){
+      var y = document.getElementById('footer-year');
+      if (y) y.textContent = new Date().getFullYear();
+    })();
     /* ── TIMES ── */
     var maint = window.__MAINT__ || {};
     var startTime = maint.start ? new Date(maint.start) : new Date();
@@ -437,9 +441,30 @@
         fb.textContent='Введите корректный email.';
         return;
       }
-      fb.className='feedback success';
-      fb.textContent='✓ Готово! Уведомим вас на '+email;
-      inp.value=''; inp.disabled=true; btn.disabled=true;
+      fb.className='feedback';
+      fb.textContent='Отправляем...';
+      inp.disabled=true;
+      btn.disabled=true;
+      fetch('/api/maintenance/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email })
+      })
+      .then(function(res){
+        if(!res.ok) return res.json().then(function(d){ throw new Error(d && d.error || 'Request failed'); });
+        return res.json();
+      })
+      .then(function(){
+        fb.className='feedback success';
+        fb.textContent='✓ Готово! Уведомим вас на '+email;
+        inp.value='';
+      })
+      .catch(function(){
+        fb.className='feedback error';
+        fb.textContent='Не удалось отправить. Попробуйте позже.';
+        inp.disabled=false;
+        btn.disabled=false;
+      });
     }
     document.getElementById('email-input').addEventListener('keydown',function(e){
       if(e.key==='Enter') handleNotify();
