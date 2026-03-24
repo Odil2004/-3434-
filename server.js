@@ -108,6 +108,20 @@ function sendAdminNotFound(res) {
   }
 }
 
+function sendNotFoundPage(res) {
+  try {
+    const html = fs.readFileSync(path.join(rootDir, "404.html"));
+    res.status(404);
+    res.set("Content-Type", "text/html; charset=UTF-8");
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.set("Pragma", "no-cache");
+    res.set("Expires", "0");
+    res.send(html);
+  } catch (_) {
+    res.status(404).send("Not found");
+  }
+}
+
 app.use(async (req, res, next) => {
   if (req.path === "/admin" || req.path === "/admin.html" || req.path.startsWith("/admin-panel")) {
     const token = getAuthTokenFromReq(req);
@@ -3889,6 +3903,13 @@ app.get("/windy-sound-effects.mp3", (_req, res) => {
 
 app.get("/favicon.ico", (_req, res) => {
   res.status(204).end();
+});
+
+app.use((req, res) => {
+  if (req.path.startsWith("/api/")) {
+    return res.status(404).json({ error: "Not found" });
+  }
+  return sendNotFoundPage(res);
 });
 
 if (!process.env.VERCEL) {
