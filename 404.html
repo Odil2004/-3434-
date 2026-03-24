@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>404 — Страница не найдена · dearfutureme.com</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after {
+      margin: 0; padding: 0; box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #ffffff;
+      color: #111111;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    header {
+      padding: 24px 40px;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 15px;
+      font-weight: 600;
+      color: #111;
+      text-decoration: none;
+      letter-spacing: -0.3px;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 40px;
+    }
+
+    .content {
+      max-width: 480px;
+      width: 100%;
+    }
+
+    .error-code {
+      font-size: 12px;
+      font-weight: 500;
+      color: #999;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 600;
+      color: #111;
+      letter-spacing: -0.8px;
+      line-height: 1.2;
+      margin-bottom: 12px;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      font-weight: 400;
+      color: #666;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    .url-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #f5f5f5;
+      border: 1px solid #e8e8e8;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 36px;
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    .url-badge .dot {
+      width: 6px; height: 6px;
+      background: #d0d0d0;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .url-badge .url-text {
+      font-size: 13px;
+      color: #888;
+      font-family: 'SF Mono', 'Fira Code', 'Fira Mono', monospace;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: #f0f0f0;
+      margin-bottom: 32px;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn-home {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #111;
+      color: #fff;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 10px 20px;
+      border-radius: 8px;
+      letter-spacing: -0.1px;
+      transition: background 0.15s, transform 0.15s;
+    }
+    .btn-home:hover {
+      background: #333;
+    }
+    .btn-home svg {
+      flex-shrink: 0;
+    }
+
+    .btn-back {
+      display: inline-flex;
+      align-items: center;
+      font-size: 14px;
+      font-weight: 500;
+      color: #666;
+      text-decoration: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: 1px solid #e8e8e8;
+      letter-spacing: -0.1px;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-back:hover {
+      border-color: #ccc;
+      color: #333;
+    }
+
+    footer {
+      padding: 20px 40px;
+      border-top: 1px solid #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .footer-left {
+      font-size: 13px;
+      color: #bbb;
+    }
+
+    .footer-right {
+      display: flex;
+      gap: 20px;
+    }
+
+    .footer-right a {
+      font-size: 13px;
+      color: #bbb;
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .footer-right a:hover { color: #666; }
+
+    @media (max-width: 600px) {
+      header, footer { padding: 20px 24px; }
+      main { padding: 40px 24px; }
+      h1 { font-size: 26px; }
+      footer { flex-direction: column; gap: 12px; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="/" class="logo">dearfutureme.com</a>
+  </header>
+
+  <main>
+    <div class="content">
+
+      <p class="error-code">Ошибка 404</p>
+      <h1>Страница не найдена</h1>
+      <p class="subtitle">
+        Такой страницы не существует или она была перемещена.<br>
+        Проверьте адрес или вернитесь на главную.
+      </p>
+
+      <div class="url-badge">
+        <div class="dot"></div>
+        <span class="url-text" id="url-text">dearfutureme.com/...</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="actions">
+        <a href="/" class="btn-home">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M1 7L7 1L13 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M7 1V13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          На главную
+        </a>
+        <a href="javascript:history.back()" class="btn-back">Назад</a>
+      </div>
+
+    </div>
+  </main>
+
+  <footer>
+    <span class="footer-left">© 2025 dearfutureme.com</span>
+    <div class="footer-right">
+      <a href="/">Главная</a>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      try {
+        var loc = window.location;
+        var isSrcdoc = loc.href === 'about:srcdoc' || loc.protocol === 'about:';
+        if (!isSrcdoc) {
+          var path = loc.pathname + loc.search;
+          if (path && path.length > 1) {
+            var display = 'dearfutureme.com' + path;
+            document.getElementById('url-text').textContent =
+              display.length > 55 ? display.slice(0, 55) + '…' : display;
+          }
+        }
+      } catch(e) {}
+    })();
+  </script>
+
+</body>
+</html>

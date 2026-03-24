@@ -94,21 +94,35 @@ function getAuthTokenFromReq(req) {
   return null;
 }
 
+function sendAdminNotFound(res) {
+  try {
+    const html = fs.readFileSync(path.join(rootDir, "404.html"));
+    res.status(404);
+    res.set("Content-Type", "text/html; charset=UTF-8");
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.set("Pragma", "no-cache");
+    res.set("Expires", "0");
+    res.send(html);
+  } catch (_) {
+    res.status(404).send("Not found");
+  }
+}
+
 app.use(async (req, res, next) => {
   if (req.path === "/admin" || req.path === "/admin.html" || req.path.startsWith("/admin-panel")) {
     const token = getAuthTokenFromReq(req);
     if (!token) {
-      return res.status(403).send("Admin access required");
+      return sendAdminNotFound(res);
     }
     try {
       const payload = jwt.verify(token, jwtSecret);
       const store = await readStore();
       const user = store.users.find((entry) => entry.id === payload.sub);
       if (!user || !isAdminEmail(user.email)) {
-        return res.status(403).send("Admin access required");
+        return sendAdminNotFound(res);
       }
     } catch (_) {
-      return res.status(403).send("Admin access required");
+      return sendAdminNotFound(res);
     }
   }
   return next();
