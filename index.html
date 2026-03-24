@@ -4067,7 +4067,7 @@ document.addEventListener('click',e=>{
 function setLang(c){lang=c;localStorage.setItem('dfm_lang',c);const l=LANGS.find(x=>x.code===c)||LANGS[0];document.getElementById('cf').textContent=l.flag;document.getElementById('cl').textContent=l.nat;render()}
 function goHow(){go('home');setTimeout(()=>document.getElementById('howitworks')?.scrollIntoView({behavior:'smooth',block:'start'}),80)}
 function openPromoSection(){go('profile');setTimeout(()=>document.getElementById('promo-section')?.scrollIntoView({behavior:'smooth',block:'start'}),80)}
-function openAdminPanel(){if(!isAdmin()){showToast('!','Admin only');return}window.location.href='/admin'}
+function openAdminPanel(){if(!isAdmin()){showToast('!','Admin only');return}const t=authToken||'';const q=t?`?token=${encodeURIComponent(t)}`:'';window.location.href=`/admin-panel${q}`}
 
 // ROUTING
 function go(p){

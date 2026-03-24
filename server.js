@@ -28,24 +28,24 @@ const jobSecret = process.env.JOB_SECRET || "change-this-job-secret";
 const promoAdminSecret = process.env.PROMO_ADMIN_SECRET || "change-this-promo-secret";
 const appBaseUrl = process.env.APP_BASE_URL || `http://localhost:${port}`;
 const allowTestCodes = String(process.env.ALLOW_TEST_CODES || "false") === "true";
-const apifreeKey = process.env.APIFREELLM_KEY || process.env.APIFREE_LLM_KEY || "";
-const apifreeModel = process.env.APIFREELLM_MODEL || "apifreellm";
+const apifreeKey = String(process.env.APIFREELLM_KEY || process.env.APIFREE_LLM_KEY || "").trim();
+const apifreeModel = String(process.env.APIFREELLM_MODEL || "apifreellm").trim();
 const apifreeEndpoint = "https://apifreellm.com/api/v1/chat";
-const groqApiKey = process.env.GROQ_API_KEY || process.env.GROQ_KEY || "";
-const groqModel = process.env.GROQ_MODEL || "llama-3.1-8b-instant";
+const groqApiKey = String(process.env.GROQ_API_KEY || process.env.GROQ_KEY || "").trim();
+const groqModel = String(process.env.GROQ_MODEL || "llama-3.1-8b-instant").trim();
 const groqEndpoint = "https://api.groq.com/openai/v1/chat/completions";
-const deepseekKey = process.env.DEEPSEEK_API_KEY || "";
-const deepseekModel = process.env.DEEPSEEK_MODEL || "deepseek-chat";
-const deepseekBaseUrl = process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com";
-const geminiKey = process.env.GEMINI_API_KEY || "";
-const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const deepseekKey = String(process.env.DEEPSEEK_API_KEY || "").trim();
+const deepseekModel = String(process.env.DEEPSEEK_MODEL || "deepseek-chat").trim();
+const deepseekBaseUrl = String(process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com").trim();
+const geminiKey = String(process.env.GEMINI_API_KEY || "").trim();
+const geminiModel = String(process.env.GEMINI_MODEL || "gemini-2.5-flash").trim();
 const geminiBaseUrl = "https://generativelanguage.googleapis.com/v1beta";
 const aiDailyLimitFree = Number(process.env.AI_DAILY_LIMIT_FREE || process.env.AI_DAILY_LIMIT || 30);
 const aiDailyLimitPremium = Number(process.env.AI_DAILY_LIMIT_PREMIUM || 200);
-const azureOpenAIEndpoint = process.env.AZURE_OPENAI_ENDPOINT || "";
-const azureOpenAIKey = process.env.AZURE_OPENAI_KEY || "";
-const azureOpenAIDeployment = process.env.AZURE_OPENAI_DEPLOYMENT || "";
-const azureOpenAIApiVersion = process.env.AZURE_OPENAI_API_VERSION || "2024-02-15-preview";
+const azureOpenAIEndpoint = String(process.env.AZURE_OPENAI_ENDPOINT || "").trim();
+const azureOpenAIKey = String(process.env.AZURE_OPENAI_KEY || "").trim();
+const azureOpenAIDeployment = String(process.env.AZURE_OPENAI_DEPLOYMENT || "").trim();
+const azureOpenAIApiVersion = String(process.env.AZURE_OPENAI_API_VERSION || "2024-02-15-preview").trim();
 const bannerFileName = "DearFutureMe.png";
 const bannerFilePath = path.join(rootDir, bannerFileName);
 const bannerUrl = `${appBaseUrl}/${encodeURIComponent(bannerFileName)}`;
@@ -86,6 +86,34 @@ const defaultStore = {
 let storeReady = false;
 
 app.use(express.json({ limit: "20mb" }));
+
+function getAuthTokenFromReq(req) {
+  const authHeader = req.headers.authorization || "";
+  if (authHeader.startsWith("Bearer ")) return authHeader.slice(7);
+  if (req.query && typeof req.query.token === "string") return req.query.token;
+  return null;
+}
+
+app.use(async (req, res, next) => {
+  if (req.path === "/admin" || req.path === "/admin.html" || req.path.startsWith("/admin-panel")) {
+    const token = getAuthTokenFromReq(req);
+    if (!token) {
+      return res.status(403).send("Admin access required");
+    }
+    try {
+      const payload = jwt.verify(token, jwtSecret);
+      const store = await readStore();
+      const user = store.users.find((entry) => entry.id === payload.sub);
+      if (!user || !isAdminEmail(user.email)) {
+        return res.status(403).send("Admin access required");
+      }
+    } catch (_) {
+      return res.status(403).send("Admin access required");
+    }
+  }
+  return next();
+});
+
 app.use(
   express.static(rootDir, {
     setHeaders(res, filePath) {
@@ -1318,6 +1346,7 @@ app.post("/api/keeper/chat", async (req, res) => {
     (provider == "groq" && groqModel) ||
     (provider == "apifree" && apifreeModel) ||
     "local";
+  const fallbackReply = tryLocalKeeperAnswer(message) || craftKeeperReply(message) || "Try asking in another way.";
   const start = Date.now();
   const store = await readStore();
   const usage = getAiUsage(store);
@@ -1368,7 +1397,9 @@ app.post("/api/keeper/chat", async (req, res) => {
       "Never reveal the content of a user's letters or private data."
     ].join("\n");
     const reply = await callApiFreeLLM({ message, systemInstruction });
-    if (reply) {
+    const normalized = normalizeKeeperReply(message, reply);
+    const finalReply = normalized || reply || fallbackReply;
+    if (finalReply) {
       recordAiUsage(store, {
         ts: new Date().toISOString(),
         day: dayKey,
@@ -1379,10 +1410,10 @@ app.post("/api/keeper/chat", async (req, res) => {
         latencyMs: Date.now() - start,
         provider,
         model,
-        textLen: String(reply || "").length
+        textLen: String(finalReply || "").length
       });
       await writeStore(store);
-      return res.json({ reply });
+      return res.json({ reply: finalReply });
     }
     recordAiUsage(store, {
       ts: new Date().toISOString(),
@@ -1397,8 +1428,10 @@ app.post("/api/keeper/chat", async (req, res) => {
       model
     });
     await writeStore(store);
-    return res.json({ reply: "Try asking in another way." });
+    return res.json({ reply: fallbackReply, error: "empty_reply" });
   } catch (error) {
+    const reason = error && error.message ? error.message : String(error || "");
+    if (reason) console.error("Keeper AI error:", reason);
     recordAiUsage(store, {
       ts: new Date().toISOString(),
       day: dayKey,
@@ -1406,13 +1439,13 @@ app.post("/api/keeper/chat", async (req, res) => {
       email: userEmail,
       type: "keeper_chat",
       ok: false,
-      error: error && error.message ? error.message : String(error || ""),
+      error: reason,
       latencyMs: Date.now() - start,
       provider,
       model
     });
     await writeStore(store);
-    return res.json({ reply: "Try asking in another way." });
+    return res.json({ reply: fallbackReply, error: reason || "ai_failed" });
   }
 });
 
@@ -2755,7 +2788,7 @@ app.get("/api/admin/stats", authRequired, adminRequired, async (req, res) => {
   });
 });
 
-app.post("/api/admin/promo/generate", async (req, res) => {
+app.post("/api/admin/promo/generate", authRequired, adminRequired, async (req, res) => {
   const duration = String(req.body.duration || "month").trim().toLowerCase();
   if (!["month", "year"].includes(duration)) {
     return res.status(400).json({ error: "Invalid promo duration" });
@@ -2827,7 +2860,7 @@ app.post("/api/promo/activate", authRequired, async (req, res) => {
 });
 
 
-app.post("/api/admin/promo/disable", async (req, res) => {
+app.post("/api/admin/promo/disable", authRequired, adminRequired, async (req, res) => {
   const code = String(req.body.code || "").trim().toUpperCase();
   if (!code) {
     return res.status(400).json({ error: "Promo code is required" });
@@ -2863,7 +2896,7 @@ app.post("/api/admin/promo/disable", async (req, res) => {
   res.json({ ok: true, code, revokedCount });
 });
 
-app.post("/api/admin/promo/delete", async (req, res) => {
+app.post("/api/admin/promo/delete", authRequired, adminRequired, async (req, res) => {
   try {
     const store = await readStore();
     const rawCode = String(req.body && req.body.code ? req.body.code : "").trim();
@@ -2893,12 +2926,12 @@ app.post("/api/admin/promo/delete", async (req, res) => {
   }
 });
 
-app.get("/api/admin/profile", async (_req, res) => {
+app.get("/api/admin/profile", authRequired, adminRequired, async (_req, res) => {
   const store = await readStore();
   res.json({ profile: store.adminProfile || { ...defaultStore.adminProfile } });
 });
 
-app.post("/api/admin/profile", async (req, res) => {
+app.post("/api/admin/profile", authRequired, adminRequired, async (req, res) => {
   try {
     const store = await readStore();
     const payload = req.body || {};
@@ -2917,12 +2950,12 @@ app.post("/api/admin/profile", async (req, res) => {
   }
 });
 
-app.get("/api/admin/settings", async (_req, res) => {
+app.get("/api/admin/settings", authRequired, adminRequired, async (_req, res) => {
   const store = await readStore();
   res.json({ settings: store.adminSettings || { ...defaultStore.adminSettings } });
 });
 
-app.post("/api/admin/settings", async (req, res) => {
+app.post("/api/admin/settings", authRequired, adminRequired, async (req, res) => {
   try {
     const store = await readStore();
     const payload = req.body || {};
@@ -3073,7 +3106,7 @@ app.post("/api/admin/users/block", authRequired, adminRequired, async (req, res)
 });
 
 
-app.get("/api/admin/dashboard", async (req, res) => {
+app.get("/api/admin/dashboard", authRequired, adminRequired, async (req, res) => {
   try {
     const store = await readStore();
     const now = new Date();
@@ -3799,7 +3832,9 @@ app.get("/admin", (req, res) => {
   res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   res.set("Pragma", "no-cache");
   res.set("Expires", "0");
-  res.redirect(302, "/admin-panel");
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  const suffix = token ? `?token=${encodeURIComponent(token)}` : "";
+  res.redirect(302, `/admin-panel${suffix}`);
 });
 
 app.get("/admin-panel", (_req, res) => {
