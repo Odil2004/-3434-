@@ -78,6 +78,7 @@ const defaultStore = {
     maintenanceEnd: "",
     maintenanceProgress: 65
   },
+  maintenanceSubscribers: [],
   liveReactions: {
     likes: 0,
     dislikes: 0,
@@ -186,8 +187,18 @@ app.use(async (req, res, next) => {
     const store = await readStore();
     const settings = store.adminSettings || defaultStore.adminSettings;
     if (!settings || !settings.maintenanceEnabled) return next();
+    const maintenanceAllowedAssets = new Set([
+      "/admin.css",
+      "/admin-main.js",
+      "/chart.umd.min.js",
+      "/i18n.extra.js"
+    ]);
+    if (maintenanceAllowedAssets.has(req.path)) return next();
     const adminAllowed = await isAdminRequest(req);
     if (adminAllowed) return next();
+    if (req.path.startsWith("/api/maintenance")) {
+      return next();
+    }
     if (req.path.startsWith("/api/")) {
       return res.status(503).json({ error: "Maintenance" });
     }
@@ -343,6 +354,10 @@ async function writeStore(store) {
 
 function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
+}
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
 }
 
 function isValidUserName(name) {
@@ -893,6 +908,45 @@ async function sendEmail(payload) {
     return sendEmailViaBrevo(payload);
   }
   return sendEmailViaSmtp(payload);
+}
+
+async function notifyMaintenanceSubscribers(store) {
+  if (!isEmailConfigured()) {
+    return { delivered: 0, pending: Array.isArray(store.maintenanceSubscribers) ? store.maintenanceSubscribers.length : 0 };
+  }
+  const subscribers = Array.isArray(store.maintenanceSubscribers) ? store.maintenanceSubscribers : [];
+  if (!subscribers.length) return { delivered: 0, pending: 0 };
+  const remaining = [];
+  let delivered = 0;
+  for (const email of subscribers) {
+    const result = await sendEmail({
+      to: email,
+      subject: "Сервис снова доступен",
+      text: "Технические работы завершены. Сайт DearFutureMe снова доступен.",
+      html: "<p>Технические работы завершены. Сайт <b>DearFutureMe</b> снова доступен.</p>"
+    });
+    if (result && result.delivered) delivered += 1;
+    else remaining.push(email);
+  }
+  store.maintenanceSubscribers = remaining;
+  await writeStore(store);
+  return { delivered, pending: remaining.length };
+}
+
+async function autoEndMaintenanceIfNeeded() {
+  const store = await readStore();
+  const settings = store.adminSettings || defaultStore.adminSettings;
+  if (!settings || !settings.maintenanceEnabled) return;
+  const endTime = settings.maintenanceEnd ? new Date(settings.maintenanceEnd).getTime() : NaN;
+  if (!Number.isFinite(endTime) || endTime <= 0) return;
+  if (Date.now() < endTime) return;
+  store.adminSettings = {
+    ...defaultStore.adminSettings,
+    ...settings,
+    maintenanceEnabled: false
+  };
+  await writeStore(store);
+  await notifyMaintenanceSubscribers(store);
 }
 
 function cleanupPendingRegistrations(store) {
@@ -1740,6 +1794,21 @@ function isCapsuleAllowed({ message, prediction }) {
 }
 
 app.get("/api/health", (_req, res) => {
+  res.json({ ok: true });
+});
+
+app.post("/api/maintenance/notify", async (req, res) => {
+  const email = normalizeEmail(req.body && req.body.email);
+  if (!isValidEmail(email)) {
+    return res.status(400).json({ error: "Invalid email" });
+  }
+  const store = await readStore();
+  const list = Array.isArray(store.maintenanceSubscribers) ? store.maintenanceSubscribers : [];
+  if (!list.includes(email)) {
+    list.push(email);
+  }
+  store.maintenanceSubscribers = list;
+  await writeStore(store);
   res.json({ ok: true });
 });
 
@@ -3066,6 +3135,11 @@ app.post("/api/admin/settings", authRequired, adminRequired, async (req, res) =>
       maintenanceProgress: progress
     };
     await writeStore(store);
+    if (prevSettings.maintenanceEnabled && !maintenanceEnabled) {
+      notifyMaintenanceSubscribers(store).catch((error) => {
+        console.error("Maintenance notify failed:", error.message);
+      });
+    }
     res.json({ ok: true, settings: store.adminSettings });
   } catch (error) {
     res.status(500).json({ error: "Unable to save settings" });
