@@ -656,7 +656,33 @@ function getTransporter() {
   });
 }
 
+const emailProvider = String(process.env.EMAIL_PROVIDER || "smtp").trim().toLowerCase();
 const smtpTimeoutMs = Number(process.env.SMTP_TIMEOUT_MS || 8000);
+
+function getEmailFromAddress() {
+  if (emailProvider === "resend") {
+    return process.env.RESEND_FROM || process.env.EMAIL_FROM || "";
+  }
+  if (emailProvider === "brevo") {
+    return process.env.BREVO_FROM_EMAIL || process.env.EMAIL_FROM || "";
+  }
+  return process.env.SMTP_FROM || process.env.SMTP_USER || "";
+}
+
+function shouldUseInlineImages() {
+  return emailProvider === "smtp";
+}
+
+function isEmailConfigured() {
+  if (emailProvider === "resend") {
+    return Boolean(process.env.RESEND_API_KEY && getEmailFromAddress());
+  }
+  if (emailProvider === "brevo") {
+    return Boolean(process.env.BREVO_API_KEY && getEmailFromAddress());
+  }
+  return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+}
+
 function sendMailWithTimeout(transporter, options) {
   const timeoutPromise = new Promise((_, reject) => {
     const id = setTimeout(() => {
@@ -665,6 +691,95 @@ function sendMailWithTimeout(transporter, options) {
     }, smtpTimeoutMs);
   });
   return Promise.race([transporter.sendMail(options), timeoutPromise]);
+}
+
+async function sendEmailViaSmtp({ to, subject, text, html, attachments }) {
+  const transporter = getTransporter();
+  if (!transporter) {
+    return { delivered: false, reason: "smtp_not_configured" };
+  }
+  try {
+    await sendMailWithTimeout(transporter, {
+      from: getEmailFromAddress(),
+      to,
+      subject,
+      attachments: Array.isArray(attachments) ? attachments : [],
+      text,
+      html
+    });
+    return { delivered: true };
+  } catch (error) {
+    const reason = error.message === "smtp_timeout" ? "smtp_timeout" : `smtp_failed:${error.message}`;
+    return { delivered: false, reason };
+  }
+}
+
+async function sendEmailViaResend({ to, subject, text, html }) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = getEmailFromAddress();
+  if (!apiKey || !from) {
+    return { delivered: false, reason: "resend_not_configured" };
+  }
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      from,
+      to,
+      subject,
+      text,
+      html
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    return { delivered: false, reason: `resend_failed:${response.status}:${errorText.slice(0, 200)}` };
+  }
+  return { delivered: true };
+}
+
+async function sendEmailViaBrevo({ to, subject, text, html }) {
+  const apiKey = process.env.BREVO_API_KEY;
+  const fromEmail = getEmailFromAddress();
+  const fromName = process.env.BREVO_FROM_NAME || "DearFutureMe";
+  if (!apiKey || !fromEmail) {
+    return { delivered: false, reason: "brevo_not_configured" };
+  }
+
+  const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": apiKey,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      sender: { name: fromName, email: fromEmail },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+      textContent: text
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    return { delivered: false, reason: `brevo_failed:${response.status}:${errorText.slice(0, 200)}` };
+  }
+  return { delivered: true };
+}
+
+async function sendEmail(payload) {
+  if (emailProvider === "resend") {
+    return sendEmailViaResend(payload);
+  }
+  if (emailProvider === "brevo") {
+    return sendEmailViaBrevo(payload);
+  }
+  return sendEmailViaSmtp(payload);
 }
 
 function cleanupPendingRegistrations(store) {
@@ -690,154 +805,141 @@ function hashVerificationCode(code) {
 }
 
 async function sendVerificationCodeEmail({ email, name, code }) {
-  const transporter = getTransporter();
-  const bannerAttachment = getEmailBannerAttachment();
-  if (!transporter) {
-    return { delivered: false, reason: "smtp_not_configured" };
+  if (!isEmailConfigured()) {
+    return { delivered: false, reason: `${emailProvider}_not_configured` };
   }
 
-  try {
-    await sendMailWithTimeout(transporter, {
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
-      to: email,
-      subject: "Welcome to DearFutureMe - confirm your account",
-      attachments: bannerAttachment ? [bannerAttachment] : [],
-      text: [
-        `Hello, ${name}.`,
-        "",
-        "Welcome to DearFutureMe.",
-        "You are almost done creating your account.",
-        "",
-        "Use this verification code to confirm your registration:",
-        "",
-        code,
-        "",
-        "The code expires in 10 minutes.",
-        "",
-        "Write to your future self. Seal your capsule. Let time deliver it."
-      ].join("\n"),
-      html: `
-        <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#201810">
-          ${getEmailBannerHtml()}
-          <h2 style="margin:0 0 16px">Welcome to DearFutureMe</h2>
-          <p>Hello, <strong>${escapeHtml(name)}</strong>.</p>
-          <p>Thank you for creating an account on <strong>DearFutureMe</strong>.</p>
-          <p>Use this verification code to confirm your registration:</p>
-          <div style="margin:24px 0;padding:18px 20px;background:#f7f1e7;border:1px solid #e2c488;font-size:32px;letter-spacing:10px;text-align:center;font-weight:bold;color:#8d6422;">
-            ${escapeHtml(code)}
-          </div>
-          <p>The code expires in 10 minutes.</p>
-          <p style="margin-top:20px;color:#5a4a36">Write to your future self. Seal your capsule. Let time deliver it.</p>
+  const bannerAttachment = shouldUseInlineImages() ? getEmailBannerAttachment() : null;
+  const result = await sendEmail({
+    to: email,
+    subject: "Welcome to DearFutureMe - confirm your account",
+    attachments: bannerAttachment ? [bannerAttachment] : [],
+    text: [
+      `Hello, ${name}.`,
+      "",
+      "Welcome to DearFutureMe.",
+      "You are almost done creating your account.",
+      "",
+      "Use this verification code to confirm your registration:",
+      "",
+      code,
+      "",
+      "The code expires in 10 minutes.",
+      "",
+      "Write to your future self. Seal your capsule. Let time deliver it."
+    ].join("\n"),
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#201810">
+        ${getEmailBannerHtml({ useCid: shouldUseInlineImages() })}
+        <h2 style="margin:0 0 16px">Welcome to DearFutureMe</h2>
+        <p>Hello, <strong>${escapeHtml(name)}</strong>.</p>
+        <p>Thank you for creating an account on <strong>DearFutureMe</strong>.</p>
+        <p>Use this verification code to confirm your registration:</p>
+        <div style="margin:24px 0;padding:18px 20px;background:#f7f1e7;border:1px solid #e2c488;font-size:32px;letter-spacing:10px;text-align:center;font-weight:bold;color:#8d6422;">
+          ${escapeHtml(code)}
         </div>
-      `
-    });
+        <p>The code expires in 10 minutes.</p>
+        <p style="margin-top:20px;color:#5a4a36">Write to your future self. Seal your capsule. Let time deliver it.</p>
+      </div>
+    `
+  });
 
+  if (result.delivered) {
     return { delivered: true, reason: null };
-  } catch (error) {
-    const reason = error.message === "smtp_timeout" ? "smtp_timeout" : `smtp_failed:${error.message}`;
-    return { delivered: false, reason };
   }
+  return { delivered: false, reason: result.reason || "email_failed" };
 }
 
 async function sendPasswordResetEmail({ email, name, code }) {
-  const transporter = getTransporter();
-  const bannerAttachment = getEmailBannerAttachment();
-  if (!transporter) {
-    return { delivered: false, reason: "smtp_not_configured" };
+  if (!isEmailConfigured()) {
+    return { delivered: false, reason: `${emailProvider}_not_configured` };
   }
 
-  try {
-    await sendMailWithTimeout(transporter, {
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
-      to: email,
-      subject: "DearFutureMe - password reset code",
-      attachments: bannerAttachment ? [bannerAttachment] : [],
-      text: [
-        `Hello, ${name || "friend"}.`,
-        "",
-        "We received a request to reset your password.",
-        "Use this 6-digit code to set a new password:",
-        "",
-        code,
-        "",
-        "If you did not request this, you can ignore this email.",
-        "",
-        "DearFutureMe"
-      ].join("\n"),
-      html: `
-        <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#201810">
-          ${getEmailBannerHtml()}
-          <h2 style="margin:0 0 16px">Reset your password</h2>
-          <p>Hello, <strong>${escapeHtml(name || "friend")}</strong>.</p>
-          <p>We received a request to reset your password.</p>
-          <p>Use this 6-digit code to set a new password:</p>
-          <div style="margin:24px 0;padding:18px 20px;background:#f7f1e7;border:1px solid #e2c488;font-size:32px;letter-spacing:10px;text-align:center;font-weight:bold;color:#8d6422;">
-            ${escapeHtml(code)}
-          </div>
-          <p>If you did not request this, you can ignore this email.</p>
-          <p style="margin-top:20px;color:#5a4a36">DearFutureMe</p>
+  const bannerAttachment = shouldUseInlineImages() ? getEmailBannerAttachment() : null;
+  const result = await sendEmail({
+    to: email,
+    subject: "DearFutureMe - password reset code",
+    attachments: bannerAttachment ? [bannerAttachment] : [],
+    text: [
+      `Hello, ${name || "friend"}.`,
+      "",
+      "We received a request to reset your password.",
+      "Use this 6-digit code to set a new password:",
+      "",
+      code,
+      "",
+      "If you did not request this, you can ignore this email.",
+      "",
+      "DearFutureMe"
+    ].join("\n"),
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#201810">
+        ${getEmailBannerHtml({ useCid: shouldUseInlineImages() })}
+        <h2 style="margin:0 0 16px">Reset your password</h2>
+        <p>Hello, <strong>${escapeHtml(name || "friend")}</strong>.</p>
+        <p>We received a request to reset your password.</p>
+        <p>Use this 6-digit code to set a new password:</p>
+        <div style="margin:24px 0;padding:18px 20px;background:#f7f1e7;border:1px solid #e2c488;font-size:32px;letter-spacing:10px;text-align:center;font-weight:bold;color:#8d6422;">
+          ${escapeHtml(code)}
         </div>
-      `
-    });
+        <p>If you did not request this, you can ignore this email.</p>
+        <p style="margin-top:20px;color:#5a4a36">DearFutureMe</p>
+      </div>
+    `
+  });
 
+  if (result.delivered) {
     return { delivered: true };
-  } catch (error) {
-    const reason = error.message === "smtp_timeout" ? "smtp_timeout" : error.message;
-    return { delivered: false, reason };
   }
+  return { delivered: false, reason: result.reason || "email_failed" };
 }
 
 async function sendWelcomeEmail({ email, name }) {
-  const transporter = getTransporter();
-  const bannerAttachment = getEmailBannerAttachment();
-  if (!transporter) {
-    return { delivered: false, reason: "smtp_not_configured" };
+  if (!isEmailConfigured()) {
+    return { delivered: false, reason: `${emailProvider}_not_configured` };
   }
 
-  try {
-    await sendMailWithTimeout(transporter, {
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
-      to: email,
-      subject: "Welcome - your DearFutureMe account is ready",
-      attachments: bannerAttachment ? [bannerAttachment] : [],
-      text: [
-        `Hello, ${name}.`,
-        "",
-        "Your DearFutureMe account has been successfully created.",
-        "",
-        "Now you can:",
-        "- write your first capsule",
-        "- save private or public messages",
-        "- open your profile and track your capsules",
-        "",
-        `Open the site: ${appBaseUrl}`
-      ].join("\n"),
-      html: `
-        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#201810">
-          ${getEmailBannerHtml()}
-          <h2 style="margin:0 0 16px">Your DearFutureMe account is ready</h2>
-          <p>Hello, <strong>${escapeHtml(name)}</strong>.</p>
-          <p>You have successfully registered on <strong>DearFutureMe</strong>.</p>
-          <p>Now you can write your first capsule, save public or private messages, and manage everything from your profile.</p>
-          <p style="margin-top:24px"><a href="${escapeAttribute(appBaseUrl)}" style="display:inline-block;padding:12px 18px;background:#c4933f;color:#1a1410;text-decoration:none">Open DearFutureMe</a></p>
-        </div>
-      `
-    });
+  const bannerAttachment = shouldUseInlineImages() ? getEmailBannerAttachment() : null;
+  const result = await sendEmail({
+    to: email,
+    subject: "Welcome - your DearFutureMe account is ready",
+    attachments: bannerAttachment ? [bannerAttachment] : [],
+    text: [
+      `Hello, ${name}.`,
+      "",
+      "Your DearFutureMe account has been successfully created.",
+      "",
+      "Now you can:",
+      "- write your first capsule",
+      "- save private or public messages",
+      "- open your profile and track your capsules",
+      "",
+      `Open the site: ${appBaseUrl}`
+    ].join("\n"),
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#201810">
+        ${getEmailBannerHtml({ useCid: shouldUseInlineImages() })}
+        <h2 style="margin:0 0 16px">Your DearFutureMe account is ready</h2>
+        <p>Hello, <strong>${escapeHtml(name)}</strong>.</p>
+        <p>You have successfully registered on <strong>DearFutureMe</strong>.</p>
+        <p>Now you can write your first capsule, save public or private messages, and manage everything from your profile.</p>
+        <p style="margin-top:24px"><a href="${escapeAttribute(appBaseUrl)}" style="display:inline-block;padding:12px 18px;background:#c4933f;color:#1a1410;text-decoration:none">Open DearFutureMe</a></p>
+      </div>
+    `
+  });
 
+  if (result.delivered) {
     return { delivered: true, reason: null };
-  } catch (error) {
-    const reason = error.message === "smtp_timeout" ? "smtp_timeout" : `smtp_failed:${error.message}`;
-    return { delivered: false, reason };
   }
+  return { delivered: false, reason: result.reason || "email_failed" };
 }
 
 async function deliverDueCapsules() {
-  const transporter = getTransporter();
-  const bannerAttachment = getEmailBannerAttachment();
-  if (!transporter) {
-    return { sent: 0, pending: 0, skipped: "smtp_not_configured" };
+  if (!isEmailConfigured()) {
+    return { sent: 0, pending: 0, skipped: `${emailProvider}_not_configured` };
   }
 
+  const bannerAttachment = shouldUseInlineImages() ? getEmailBannerAttachment() : null;
   const now = Date.now();
   const store = await readStore();
   const due = store.capsules.filter((capsule) => {
@@ -855,8 +957,7 @@ async function deliverDueCapsules() {
     }
 
     const openDate = new Date(capsule.openDate).toLocaleString("ru-RU");
-    await sendMailWithTimeout(transporter, {
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    const result = await sendEmail({
       to: capsule.email,
       subject: "Your DearFutureMe capsule is ready",
       attachments: bannerAttachment ? [bannerAttachment] : [],
@@ -875,7 +976,7 @@ async function deliverDueCapsules() {
         .join("\n"),
       html: `
         <div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;padding:24px;color:#201810">
-          ${getEmailBannerHtml()}
+          ${getEmailBannerHtml({ useCid: shouldUseInlineImages() })}
           <h2 style="margin:0 0 16px">Your DearFutureMe capsule is ready</h2>
           <p>Hello, <strong>${escapeHtml(capsule.name)}</strong>.</p>
           <p>Your capsule opened on <strong>${escapeHtml(openDate)}</strong>.</p>
@@ -892,8 +993,12 @@ async function deliverDueCapsules() {
       `
     });
 
-    capsule.deliveredAt = new Date().toISOString();
-    sent += 1;
+    if (result.delivered) {
+      capsule.deliveredAt = new Date().toISOString();
+      sent += 1;
+    } else {
+      console.error("Email delivery failed:", result.reason || "email_failed");
+    }
   }
 
   if (sent > 0) {
@@ -922,12 +1027,11 @@ function getDaysLeft(openDate) {
 }
 
 async function sendDailyReminders() {
-  const transporter = getTransporter();
-  const bannerAttachment = getEmailBannerAttachment();
-  if (!transporter) {
-    return { sent: 0, pending: 0, skipped: "smtp_not_configured" };
+  if (!isEmailConfigured()) {
+    return { sent: 0, pending: 0, skipped: `${emailProvider}_not_configured` };
   }
 
+  const bannerAttachment = shouldUseInlineImages() ? getEmailBannerAttachment() : null;
   const now = Date.now();
   const todayKey = getUtcDateKey();
   const store = await readStore();
@@ -945,33 +1049,37 @@ async function sendDailyReminders() {
     const openDate = new Date(capsule.openDate).toLocaleDateString("ru-RU");
     const daysLabel = formatDaysRu(daysLeft);
 
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    const result = await sendEmail({
       to: capsule.email,
       attachments: bannerAttachment ? [bannerAttachment] : [],
-      subject: `Напоминание DearFutureMe — осталось ${daysLabel}`,
+      subject: `?????????????????????? DearFutureMe ??? ???????????????? ${daysLabel}`,
       text: [
-        `Здравствуйте, ${capsule.name}.`,
+        `????????????????????????, ${capsule.name}.`,
         "",
-        `До открытия вашей капсулы осталось ${daysLabel}.`,
-        `Дата открытия: ${openDate}.`,
+        `???? ???????????????? ?????????? ?????????????? ???????????????? ${daysLabel}.`,
+        `???????? ????????????????: ${openDate}.`,
         "",
-        `Открыть сайт: ${appBaseUrl}`
-      ].join("\n"),
+        `?????????????? ????????: ${appBaseUrl}`
+      ].join("
+"),
       html: `
         <div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;padding:24px;color:#201810">
-          ${getEmailBannerHtml()}
-          <h2 style="margin:0 0 16px">Напоминание DearFutureMe</h2>
-          <p>Здравствуйте, <strong>${escapeHtml(capsule.name)}</strong>.</p>
-          <p>До открытия вашей капсулы осталось <strong>${escapeHtml(daysLabel)}</strong>.</p>
-          <p>Дата открытия: <strong>${escapeHtml(openDate)}</strong>.</p>
-          <p style="margin-top:24px"><a href="${escapeAttribute(appBaseUrl)}">Открыть DearFutureMe</a></p>
+          ${getEmailBannerHtml({ useCid: shouldUseInlineImages() })}
+          <h2 style="margin:0 0 16px">?????????????????????? DearFutureMe</h2>
+          <p>????????????????????????, <strong>${escapeHtml(capsule.name)}</strong>.</p>
+          <p>???? ???????????????? ?????????? ?????????????? ???????????????? <strong>${escapeHtml(daysLabel)}</strong>.</p>
+          <p>???????? ????????????????: <strong>${escapeHtml(openDate)}</strong>.</p>
+          <p style="margin-top:24px"><a href="${escapeAttribute(appBaseUrl)}">?????????????? DearFutureMe</a></p>
         </div>
       `
     });
 
-    capsule.reminderLastSent = todayKey;
-    sent += 1;
+    if (result.delivered) {
+      capsule.reminderLastSent = todayKey;
+      sent += 1;
+    } else {
+      console.error("Email reminder failed:", result.reason || "email_failed");
+    }
   }
 
   if (sent > 0) {
@@ -1001,8 +1109,9 @@ function getEmailBannerAttachment() {
   };
 }
 
-function getEmailBannerHtml() {
-  if (fs.existsSync(bannerFilePath)) {
+function getEmailBannerHtml({ useCid } = {}) {
+  const allowCid = useCid !== false;
+  if (allowCid && fs.existsSync(bannerFilePath)) {
     return `
       <div style="margin:0 0 18px;text-align:center">
         <img src="cid:${bannerCid}" alt="DearFutureMe" style="max-width:100%;height:auto;border-radius:12px;display:block;margin:0 auto">
