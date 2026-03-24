@@ -175,6 +175,12 @@ app.use(async (req, res, next) => {
       if (!user || !isAdminEmail(user.email)) {
         return sendAdminNotFound(res);
       }
+      const settings = store.adminSettings || defaultStore.adminSettings;
+      if (settings && settings.maintenanceEnabled) {
+        notifyMaintenanceSubscribers(store).catch((error) => {
+          console.error("Maintenance notify failed:", error.message);
+        });
+      }
     } catch (_) {
       return sendAdminNotFound(res);
     }
@@ -1832,7 +1838,7 @@ app.get("/api/health", (_req, res) => {
 
 app.post("/api/maintenance/notify", async (req, res) => {
   const email = normalizeEmail(normalizeEmailLike(req.body && req.body.email));
-  if (!isValidEmail(email)) {
+  if (!email) {
     return res.status(400).json({ error: "Invalid email" });
   }
   const store = await readStore();
