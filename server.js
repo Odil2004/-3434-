@@ -356,6 +356,39 @@ function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
 }
 
+function normalizeEmailLike(email) {
+  const map = {
+    "А": "A",
+    "В": "B",
+    "Е": "E",
+    "К": "K",
+    "М": "M",
+    "Н": "H",
+    "О": "O",
+    "Р": "P",
+    "С": "C",
+    "Т": "T",
+    "У": "Y",
+    "Х": "X",
+    "а": "a",
+    "в": "b",
+    "е": "e",
+    "к": "k",
+    "м": "m",
+    "н": "h",
+    "о": "o",
+    "р": "p",
+    "с": "c",
+    "т": "t",
+    "у": "y",
+    "х": "x"
+  };
+  return String(email || "")
+    .replace(/\u00A0/g, " ")
+    .replace(/[АВЕКМНОРСТУХавекмнорстух]/g, (ch) => map[ch] || ch)
+    .trim();
+}
+
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
 }
@@ -1798,7 +1831,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.post("/api/maintenance/notify", async (req, res) => {
-  const email = normalizeEmail(req.body && req.body.email);
+  const email = normalizeEmail(normalizeEmailLike(req.body && req.body.email));
   if (!isValidEmail(email)) {
     return res.status(400).json({ error: "Invalid email" });
   }

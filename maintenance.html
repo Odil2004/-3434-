@@ -431,11 +431,22 @@
     setInterval(updateElapsed, 30000);
 
     /* ── FORM ── */
+    function normalizeEmailInput(value){
+      var v = String(value || '').replace(/\u00A0/g, ' ').trim();
+      var map = {
+        'А':'A','В':'B','Е':'E','К':'K','М':'M','Н':'H','О':'O','Р':'P','С':'C','Т':'T','У':'Y','Х':'X',
+        'а':'a','в':'b','е':'e','к':'k','м':'m','н':'h','о':'o','р':'p','с':'c','т':'t','у':'y','х':'x'
+      };
+      v = v.replace(/[АВЕКМНОРСТУХавекмнорстух]/g, function(ch){ return map[ch] || ch; });
+      return v;
+    }
+
     function handleNotify(){
       var inp = document.getElementById('email-input');
       var fb  = document.getElementById('feedback');
       var btn = document.getElementById('notify-btn');
-      var email = inp.value.trim();
+      var email = normalizeEmailInput(inp.value);
+      if (email !== inp.value) inp.value = email;
       if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)){
         fb.className='feedback error';
         fb.textContent='Введите корректный email.';
