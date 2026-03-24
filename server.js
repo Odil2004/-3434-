@@ -63,6 +63,7 @@ const defaultStore = {
   reviews: [],
   pendingRegistrations: [],
   pendingPasswordResets: [],
+  pendingLogins: [],
   promoCodes: [],
   adminProfile: {
     firstName: "Admin",
@@ -290,8 +291,9 @@ async function readStore() {
     if (!Array.isArray(store.users)) store.users = [];
     if (!Array.isArray(store.capsules)) store.capsules = [];
     if (!Array.isArray(store.reviews)) store.reviews = [];
-    if (!Array.isArray(store.pendingRegistrations)) store.pendingRegistrations = [];
-    if (!Array.isArray(store.pendingPasswordResets)) store.pendingPasswordResets = [];
+      if (!Array.isArray(store.pendingRegistrations)) store.pendingRegistrations = [];
+      if (!Array.isArray(store.pendingPasswordResets)) store.pendingPasswordResets = [];
+      if (!Array.isArray(store.pendingLogins)) store.pendingLogins = [];
     if (!Array.isArray(store.promoCodes)) store.promoCodes = [];
     if (!store.adminProfile || typeof store.adminProfile !== "object") {
       store.adminProfile = { ...defaultStore.adminProfile };
@@ -322,8 +324,9 @@ async function readStore() {
   if (!Array.isArray(store.users)) store.users = [];
   if (!Array.isArray(store.capsules)) store.capsules = [];
   if (!Array.isArray(store.reviews)) store.reviews = [];
-  if (!Array.isArray(store.pendingRegistrations)) store.pendingRegistrations = [];
-  if (!Array.isArray(store.pendingPasswordResets)) store.pendingPasswordResets = [];
+    if (!Array.isArray(store.pendingRegistrations)) store.pendingRegistrations = [];
+    if (!Array.isArray(store.pendingPasswordResets)) store.pendingPasswordResets = [];
+    if (!Array.isArray(store.pendingLogins)) store.pendingLogins = [];
   if (!Array.isArray(store.promoCodes)) store.promoCodes = [];
   if (!store.adminProfile || typeof store.adminProfile !== "object") {
     store.adminProfile = { ...defaultStore.adminProfile };
@@ -1002,6 +1005,13 @@ function cleanupPendingPasswordResets(store) {
   });
 }
 
+function cleanupPendingLogins(store) {
+  const now = Date.now();
+  store.pendingLogins = store.pendingLogins.filter((entry) => {
+    return new Date(entry.expiresAt).getTime() > now;
+  });
+}
+
 function buildVerificationCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
@@ -1048,6 +1058,50 @@ async function sendVerificationCodeEmail({ email, name, code }) {
         <p style="margin-top:20px;color:#5a4a36">Write to your future self. Seal your capsule. Let time deliver it.</p>
       </div>
     `
+  });
+
+  if (result.delivered) {
+    return { delivered: true, reason: null };
+  }
+  return { delivered: false, reason: result.reason || "email_failed" };
+}
+
+async function sendLoginCodeEmail({ email, name, code }) {
+  if (!isEmailConfigured()) {
+    return { delivered: false, reason: `${emailProvider}_not_configured` };
+  }
+
+  const bannerAttachment = shouldUseInlineImages() ? getEmailBannerAttachment() : null;
+  const result = await sendEmail({
+    to: email,
+    subject: "DearFutureMe - login code",
+    attachments: bannerAttachment ? [bannerAttachment] : [],
+    text: [
+      `Hello, ${name || "friend"}.`,
+      "",
+      "We received a request to sign in to DearFutureMe.",
+      "Use this verification code to complete your login:",
+      "",
+      code,
+      "",
+      "The code expires in 10 minutes.",
+      "",
+      "If this wasn’t you, you can ignore this email."
+    ].join("\n"),
+    html: `
+        <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#201810">
+          ${getEmailBannerHtml({ useCid: shouldUseInlineImages() })}
+          <h2 style="margin:0 0 16px">Confirm your login</h2>
+          <p>Hello, <strong>${escapeHtml(name || "friend")}</strong>.</p>
+          <p>We received a request to sign in to <strong>DearFutureMe</strong>.</p>
+          <p>Use this verification code to complete your login:</p>
+          <div style="margin:24px 0;padding:18px 20px;background:#f7f1e7;border:1px solid #e2c488;font-size:32px;letter-spacing:10px;text-align:center;font-weight:bold;color:#8d6422;">
+            ${escapeHtml(code)}
+          </div>
+          <p>The code expires in 10 minutes.</p>
+          <p style="margin-top:20px;color:#5a4a36">If this wasn’t you, you can ignore this email.</p>
+        </div>
+      `
   });
 
   if (result.delivered) {
@@ -2861,22 +2915,89 @@ app.post("/api/auth/register", async (req, res) => {
   });
 });
 
-app.post("/api/auth/login", async (req, res) => {
+async function handleLoginRequest(req, res) {
   const email = normalizeEmail(req.body.email);
   const password = String(req.body.password || "");
+  if (!email || password.length < 6) {
+    return res.status(400).json({ error: "Invalid login payload" });
+  }
   const store = await readStore();
+  cleanupPendingLogins(store);
   const user = store.users.find((entry) => entry.email === email);
 
   if (!user) {
+    await writeStore(store);
     return res.status(401).json({ error: "Invalid email or password" });
   }
 
   const validPassword = await bcrypt.compare(password, user.passwordHash);
   if (!validPassword) {
+    await writeStore(store);
     return res.status(401).json({ error: "Invalid email or password" });
   }
 
-  res.json({
+  const code = buildVerificationCode();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+  const existing = store.pendingLogins.find((entry) => entry.email === email);
+  const pending = {
+    id: existing?.id || crypto.randomUUID(),
+    email,
+    codeHash: hashVerificationCode(code),
+    expiresAt,
+    createdAt: existing?.createdAt || new Date().toISOString()
+  };
+
+  store.pendingLogins = store.pendingLogins.filter((entry) => entry.email !== email);
+  store.pendingLogins.push(pending);
+  await writeStore(store);
+
+  const emailResult = await sendLoginCodeEmail({ email, name: user.name, code });
+  const payload = {
+    ok: true,
+    expiresAt,
+    emailSent: emailResult.delivered
+  };
+  if (!emailResult.delivered) {
+    payload.note = emailResult.reason;
+    if (allowTestCodes) {
+      payload.verificationCode = code;
+    }
+  }
+  return res.status(200).json(payload);
+}
+
+app.post("/api/auth/login", async (req, res) => {
+  return handleLoginRequest(req, res);
+});
+
+app.post("/api/auth/login-request", async (req, res) => {
+  return handleLoginRequest(req, res);
+});
+
+app.post("/api/auth/login-confirm", async (req, res) => {
+  const email = normalizeEmail(req.body.email);
+  const code = String(req.body.code || "").trim();
+  if (!email || !code) {
+    return res.status(400).json({ error: "Invalid login verification payload" });
+  }
+  const store = await readStore();
+  cleanupPendingLogins(store);
+  const pending = store.pendingLogins.find((entry) => entry.email === email);
+  if (!pending) {
+    return res.status(400).json({ error: "Login code expired or missing" });
+  }
+  if (pending.codeHash !== hashVerificationCode(code)) {
+    return res.status(400).json({ error: "Invalid login code" });
+  }
+  const user = store.users.find((entry) => entry.email === email);
+  if (!user) {
+    store.pendingLogins = store.pendingLogins.filter((entry) => entry.email !== email);
+    await writeStore(store);
+    return res.status(404).json({ error: "User not found" });
+  }
+  store.pendingLogins = store.pendingLogins.filter((entry) => entry.email !== email);
+  await writeStore(store);
+  return res.json({
     token: issueToken(user),
     user: publicUser(user)
   });

@@ -1945,6 +1945,7 @@ let adminStats={users:0,premiumUsers:0,publicCapsules:0,unusedPromoCodes:0};
 let vis='public',dateMode='1y',authMode='login';
 let pendingReg=null;
 let pendingReset=null;
+let pendingLogin=null;
 let aiTimer=null,predTxt='';
 let mapInst=null,mapDone=false;
 let currentLocation=null;
@@ -5029,15 +5030,18 @@ function renderPrem(){
 
   // AUTH
   function updateAuthUI(){
-    if(authMode==='verify'&&!pendingReg)authMode='reg';
+    if(authMode==='verify'&&!pendingReg&&!pendingLogin)authMode='login';
     if(authMode==='reset'&&!pendingReset)authMode='forgot';
     if(authMode==='success'&&!user)authMode='login';
+    const t=gt(lang);
     const vEmail=document.getElementById('auth-verify-email');
-    if(vEmail)vEmail.textContent=pendingReg?.email||'';
+    if(vEmail)vEmail.textContent=pendingReg?.email||pendingLogin?.email||'';
+    const vTitle=document.getElementById('auth-verify-title');
+    if(vTitle)vTitle.textContent=pendingLogin?(t.authLoginVerifyTitle||'Подтвердите вход'):(t.authVerifyTitle||'Проверь почту');
     const rEmail=document.getElementById('auth-reset-email');
     if(rEmail)rEmail.textContent=pendingReset?.email||'';
     const sName=document.getElementById('auth-success-name');
-    if(sName&&user)sName.textContent=(gt(lang).authWelcome||'Привет,')+' '+user.name;
+    if(sName&&user)sName.textContent=(t.authWelcome||'Привет,')+' '+user.name;
     setAuthPanel(authMode);
     if(authMode==='verify')startAuthTimer('auth-verify');
     if(authMode==='reset')startAuthTimer('auth-reset');
@@ -5187,17 +5191,14 @@ function renderPrem(){
     if(!ok)return;
     setAuthLoading('auth-login-btn',true);
     try{
-      const data=await api('/api/auth/login',{method:'POST',body:JSON.stringify({email,password})});
-      user=data.user||null;
-      setToken(data.token||'');
-      await Promise.all([loadMine(),loadAdminStats()]);
-      document.body.classList.toggle('premium-active',hasPremium());
-      if(currentLocation)syncOwnCapsuleLocations(currentLocation);
-      fillUserFields();
-      updAuth();patchAuthMenu();updateMediaUI();updateSecretUI();updateVoiceUI();updateStyleUI();
-      updMobAuth();
-      showToast(t.wb,(t.si||'Signed in as')+' '+user.name);
-      go('profile');
+      const data=await api('/api/auth/login-request',{method:'POST',body:JSON.stringify({email,password})});
+      pendingLogin={email,password};
+      const vEmail=document.getElementById('auth-verify-email');
+      if(vEmail)vEmail.textContent=email;
+      const vTitle=document.getElementById('auth-verify-title');
+      if(vTitle)vTitle.textContent=t.authLoginVerifyTitle||'Подтвердите вход';
+      setAuthPanel('verify');
+      showToast(t.verifySent||'Code sent.',data.emailSent?(t.verifySentDesc||'Check your email and enter the 6-digit code.'):(data.note||'Email sending is not configured yet.'));
     }catch(e){
       showToast('!',e.message||t.authFailed||'Unable to sign in.');
     }finally{
@@ -5242,25 +5243,41 @@ function renderPrem(){
   }
   async function doVerify(){
     const t=gt(lang);
-    if(!pendingReg){setAuthPanel('reg');return;}
+    if(!pendingReg && !pendingLogin){setAuthPanel('login');return;}
     const code=getAuthCode('reg');
     if(code.length<6){setAuthErr('auth-verify-err',true);authCodeCells('reg').forEach(c=>c.classList.add('err'));return;}
     setAuthErr('auth-verify-err',false);
     setAuthLoading('auth-verify-btn',true);
     try{
-      const data=await api('/api/auth/register',{method:'POST',body:JSON.stringify({email:pendingReg.email,code})});
-      user=data.user||null;
-      setToken(data.token||'');
-      await Promise.all([loadMine(),loadAdminStats()]);
-      document.body.classList.toggle('premium-active',hasPremium());
-      if(currentLocation)syncOwnCapsuleLocations(currentLocation);
-      fillUserFields();
-      updAuth();patchAuthMenu();updateMediaUI();updateSecretUI();updateVoiceUI();updateStyleUI();
-      updMobAuth();
-      pendingReg=null;
-      const name=document.getElementById('auth-success-name');
-      if(name)name.textContent=(t.authWelcome||'Привет,')+' '+(user?.name||'');
-      setAuthPanel('success');
+      if(pendingLogin){
+        const data=await api('/api/auth/login-confirm',{method:'POST',body:JSON.stringify({email:pendingLogin.email,code})});
+        user=data.user||null;
+        setToken(data.token||'');
+        await Promise.all([loadMine(),loadAdminStats()]);
+        document.body.classList.toggle('premium-active',hasPremium());
+        if(currentLocation)syncOwnCapsuleLocations(currentLocation);
+        fillUserFields();
+        updAuth();patchAuthMenu();updateMediaUI();updateSecretUI();updateVoiceUI();updateStyleUI();
+        updMobAuth();
+        pendingLogin=null;
+        clearAuthCode('reg');
+        showToast(t.wb,(t.si||'Signed in as')+' '+user.name);
+        go('profile');
+      }else{
+        const data=await api('/api/auth/register',{method:'POST',body:JSON.stringify({email:pendingReg.email,code})});
+        user=data.user||null;
+        setToken(data.token||'');
+        await Promise.all([loadMine(),loadAdminStats()]);
+        document.body.classList.toggle('premium-active',hasPremium());
+        if(currentLocation)syncOwnCapsuleLocations(currentLocation);
+        fillUserFields();
+        updAuth();patchAuthMenu();updateMediaUI();updateSecretUI();updateVoiceUI();updateStyleUI();
+        updMobAuth();
+        pendingReg=null;
+        const name=document.getElementById('auth-success-name');
+        if(name)name.textContent=(t.authWelcome||'Привет,')+' '+(user?.name||'');
+        setAuthPanel('success');
+      }
     }catch(e){
       showToast('!',e.message||t.verifyInvalid||'Invalid code.');
       setAuthErr('auth-verify-err',true);
@@ -5317,6 +5334,16 @@ function renderPrem(){
   }
   async function resendVerify(){
     const t=gt(lang);
+    if(pendingLogin){
+      startAuthTimer('auth-verify');
+      try{
+        await api('/api/auth/login-request',{method:'POST',body:JSON.stringify({email:pendingLogin.email,password:pendingLogin.password})});
+        showToast(t.verifySent||'Code sent.',t.verifySentDesc||'Check your email for a new code.');
+      }catch(e){
+        showToast('!',e.message||t.authFailed||'Unable to resend code.');
+      }
+      return;
+    }
     if(!pendingReg){setAuthPanel('reg');return;}
     startAuthTimer('auth-verify');
     try{
@@ -5386,7 +5413,7 @@ function startAuthTimer(kind){
   tick();
   authTimer=setInterval(tick,1000);
 }
-function doLogout(){const t=gt(lang);user=null;caps=[];pendingReg=null;pendingReset=null;authMode='login';setToken('');document.body.classList.remove('premium-active');updAuth();updMobAuth();showToast(t.so,t.authLoggedOut||'Signed out.');go('home')}
+function doLogout(){const t=gt(lang);user=null;caps=[];pendingReg=null;pendingReset=null;pendingLogin=null;authMode='login';setToken('');document.body.classList.remove('premium-active');updAuth();updMobAuth();showToast(t.so,t.authLoggedOut||'Signed out.');go('home')}
 function startAuthTimer(kind){
   const t=gt(lang);
   const btn=document.getElementById(kind==='auth-verify'?'auth-verify-resend':'auth-reset-resend');
