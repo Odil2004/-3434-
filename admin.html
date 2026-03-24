@@ -258,7 +258,52 @@
 
     <div class="pg" id="pg-analytics"><div class="sg"><div class="sc"><div class="sc-num" data-stat="retention30">0%</div><div class="sc-lbl">Удержание</div></div><div class="sc"><div class="sc-num" data-stat="capsulesPerUser">0</div><div class="sc-lbl">Капсул на юзера</div></div><div class="sc"><div class="sc-num" data-stat="avgSession">0 мин</div><div class="sc-lbl">Ср. время сессии</div></div><div class="sc"><div class="sc-num" data-stat="refSources">0</div><div class="sc-lbl">Реф. источников</div></div></div><div class="r2"><div class="panel"><div class="ph"><div class="ph-l"><div class="ph-t">Регистрации по месяцам</div></div></div><div class="ch-body"><div class="ch200"><canvas id="anBarChart"></canvas></div></div></div><div class="panel"><div class="ph"><div class="ph-l"><div class="ph-t">Источники трафика</div></div></div><div class="dw"><div class="dc"><canvas id="trafDonut"></canvas><div class="dcc"><div class="dv">100%</div><div class="dl">трафик</div></div></div><div class="dleg"><div class="dli"><div class="dld" style="background:#4F87F5"></div><div class="dln">Прямой</div><div class="dlp">0%</div></div><div class="dli"><div class="dld" style="background:#1FC99A"></div><div class="dln">Соцсети</div><div class="dlp">0%</div></div><div class="dli"><div class="dld" style="background:#C9A84C"></div><div class="dln">Поиск</div><div class="dlp">0%</div></div><div class="dli"><div class="dld" style="background:#9270EF"></div><div class="dln">Реферал</div><div class="dlp">0%</div></div></div></div></div></div></div>
 
-    <div class="pg" id="pg-settings"><div class="r2b"><div class="ss"><div class="ph"><div class="ph-l"><div class="ph-t">Основные настройки</div></div></div><div class="sr"><div class="sl">Название сайта</div><input class="si" id="siteNameInput" value="DearFutureMe"></div><div class="sr"><div class="sl">Email поддержки</div><input class="si" id="supportEmailInput" value="support@dearfutureme.com"></div></div></div></div>
+    <div class="pg" id="pg-settings">
+      <div class="r2b">
+        <div class="ss">
+          <div class="ph">
+            <div class="ph-l">
+              <div class="ph-t">Основные настройки</div>
+            </div>
+          </div>
+          <div class="sr">
+            <div class="sl">Название сайта</div>
+            <input class="si" id="siteNameInput" value="DearFutureMe">
+          </div>
+          <div class="sr">
+            <div class="sl">Email поддержки</div>
+            <input class="si" id="supportEmailInput" value="support@dearfutureme.com">
+          </div>
+        </div>
+        <div class="ss">
+          <div class="ph">
+            <div class="ph-l">
+              <div class="ph-t">Технические работы</div>
+              <div class="ph-s">Когда включено, сайт покажет страницу обслуживания для всех, кроме админов.</div>
+            </div>
+          </div>
+          <div class="sr">
+            <div class="sl">Статус</div>
+            <select class="si" id="maintEnabledInput">
+              <option value="0">Выключено</option>
+              <option value="1">Включено</option>
+            </select>
+          </div>
+          <div class="sr">
+            <div class="sl">Начало (дата и время)</div>
+            <input class="si" id="maintStartInput" type="datetime-local">
+          </div>
+          <div class="sr">
+            <div class="sl">Окончание (дата и время)</div>
+            <input class="si" id="maintEndInput" type="datetime-local">
+          </div>
+          <div class="sr">
+            <div class="sl">Прогресс (%)</div>
+            <input class="si" id="maintProgressInput" type="number" min="0" max="100" step="1" placeholder="0-100">
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div class="pg" id="pg-reviews"><div class="sg"><div class="sc"><div class="sc-num" data-stat="reviewsTotal">0</div><div class="sc-lbl">Всего отзывов</div></div><div class="sc"><div class="sc-num" data-stat="reviewsAvg">0.0</div><div class="sc-lbl">Средняя оценка</div></div><div class="sc"><div class="sc-num" data-stat="reviewsPublished">0</div><div class="sc-lbl">Опубликовано</div></div><div class="sc"><div class="sc-num" data-stat="reviewsComplaints">0</div><div class="sc-lbl">Жалоб</div></div></div><div class="r2b"><div class="panel"><div class="ph"><div class="ph-l"><div class="ph-t">Все отзывы</div></div></div><div class="tw"><table id="revTable"><thead><tr><th>Автор</th><th>Оценка</th><th>Отзыв</th><th>Дата</th><th>Статус</th><th>Действия</th></tr></thead><tbody id="revTableBody"></tbody></table></div></div><div class="panel"><div class="ph"><div class="ph-l"><div class="ph-t">Рейтинг</div></div></div><div style="padding:20px"><div style="font-size:64px" data-stat="reviewsAvg">0.0</div><div style="font-size:12px"><span data-stat="reviewsTotal">0</span> отзывов</div><div style="margin-top:12px"><div data-review-bar="5" style="height:4px;background:#E0A030;width:0"></div><div data-review-bar="4" style="height:4px;background:#1FC99A;width:0"></div><div data-review-bar="3" style="height:4px;background:#4F87F5;width:0"></div><div data-review-bar="2" style="height:4px;background:#E0A030;width:0"></div><div data-review-bar="1" style="height:4px;background:#E85050;width:0"></div></div></div></div></div></div>
 

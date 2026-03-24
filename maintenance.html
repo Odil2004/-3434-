@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="robots" content="noindex, nofollow"/>
+  <title>Технические работы · dearfutureme.com</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #fafafa;
+      color: #111;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── HEADER ── */
+    header {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      padding: 24px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 10;
+    }
+    .logo {
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      text-decoration: none;
+      letter-spacing: -0.3px;
+    }
+    .header-status {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.7);
+    }
+    .pulse-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #fbbf24;
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity:1; box-shadow: 0 0 0 0 rgba(251,191,36,0.5); }
+      50%      { opacity:.7; box-shadow: 0 0 0 5px rgba(251,191,36,0); }
+    }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      width: 100%;
+      height: 420px;
+      background: #0d0d1a;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    #hero-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+    }
+
+    .hero-content {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      text-align: center;
+      padding: 0 24px;
+      z-index: 2;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.7);
+      backdrop-filter: blur(8px);
+      animation: fadeDown .8s ease .2s both;
+    }
+
+    .hero-title {
+      font-size: clamp(28px, 5vw, 46px);
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: -1.2px;
+      line-height: 1.15;
+      animation: fadeDown .8s ease .4s both;
+    }
+    .hero-title span {
+      background: linear-gradient(90deg, #fbbf24, #f97316);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: 15px;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.6;
+      max-width: 420px;
+      animation: fadeDown .8s ease .6s both;
+    }
+
+    /* Progress bar */
+    .progress-wrap {
+      width: 240px;
+      animation: fadeDown .8s ease .8s both;
+    }
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 8px;
+    }
+    .progress-track {
+      height: 3px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, #fbbf24, #f97316);
+      border-radius: 99px;
+      transition: width .8s cubic-bezier(.4,0,.2,1);
+    }
+
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── MAIN ── */
+    main {
+      flex: 1;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 48px 24px 60px;
+      background: #fafafa;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid #e8e8e8;
+      border-radius: 16px;
+      padding: 48px 52px;
+      max-width: 520px;
+      width: 100%;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.05);
+    }
+
+    .card-eyebrow {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .6px;
+      text-transform: uppercase;
+      color: #92400e;
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      border-radius: 20px;
+      padding: 4px 10px;
+      display: inline-block;
+      margin-bottom: 24px;
+    }
+
+    h2 {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -.5px;
+      color: #111;
+      margin-bottom: 8px;
+    }
+
+    .card-desc {
+      font-size: 14px;
+      color: #777;
+      line-height: 1.65;
+      margin-bottom: 28px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: #ebebeb;
+      border: 1px solid #ebebeb;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 28px;
+    }
+    .stat {
+      background: #fff;
+      padding: 14px 16px;
+    }
+    .stat-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .3px;
+      text-transform: uppercase;
+      color: #bbb;
+      margin-bottom: 4px;
+    }
+    .stat-value {
+      font-size: 14px;
+      font-weight: 500;
+      color: #111;
+    }
+    .stat-value.warn { color: #d97706; }
+
+    hr {
+      border: none;
+      border-top: 1px solid #f0f0f0;
+      margin-bottom: 24px;
+    }
+
+    .form-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: #333;
+      display: block;
+      margin-bottom: 6px;
+    }
+    .form-hint {
+      font-size: 12px;
+      color: #bbb;
+      margin-bottom: 12px;
+    }
+    .form-row {
+      display: flex;
+      gap: 8px;
+    }
+    .form-row input[type="email"] {
+      flex: 1;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      color: #111;
+      background: #fafafa;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color .15s, background .15s;
+    }
+    .form-row input::placeholder { color: #ccc; }
+    .form-row input:focus { border-color: #999; background: #fff; }
+    .form-row button {
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: #fff;
+      background: #111;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .15s;
+    }
+    .form-row button:hover { background: #333; }
+    .form-row button:disabled { background: #ccc; cursor: default; }
+
+    .feedback {
+      font-size: 12px;
+      margin-top: 9px;
+      min-height: 16px;
+      color: #bbb;
+    }
+    .feedback.success { color: #16a34a; }
+    .feedback.error   { color: #dc2626; }
+
+    /* ── FOOTER ── */
+    footer {
+      padding: 20px 48px;
+      border-top: 1px solid #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fafafa;
+    }
+    .footer-copy { font-size: 12px; color: #ccc; }
+
+    @media (max-width: 600px) {
+      header { padding: 20px 20px; }
+      .hero { height: 360px; }
+      .card { padding: 32px 24px; border-radius: 12px; }
+      .stats { grid-template-columns: 1fr; }
+      .form-row { flex-direction: column; }
+      footer { padding: 20px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <a href="/" class="logo">dearfutureme.com</a>
+    <div class="header-status">
+      <div class="pulse-dot"></div>
+      Технические работы
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <div class="hero">
+    <canvas id="hero-canvas"></canvas>
+    <div class="hero-content">
+      <div class="hero-badge">
+        <div class="pulse-dot"></div>
+        Обслуживание сервера
+      </div>
+      <h1 class="hero-title">Улучшаем сервис<br>для <span>вас</span></h1>
+      <p class="hero-sub">Плановые технические работы — скоро всё будет готово</p>
+      <div class="progress-wrap">
+        <div class="progress-label">
+          <span>Прогресс</span>
+          <span id="progress-value">0%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CARD -->
+  <main>
+    <div class="card">
+      <span class="card-eyebrow">Обслуживание</span>
+      <h2>Сайт временно недоступен</h2>
+      <p class="card-desc">
+        Мы проводим плановые технические работы по улучшению сервиса.<br>
+        Скоро всё вернётся в норму.
+      </p>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-label">Начало</div>
+          <div class="stat-value" id="start-time">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Окончание</div>
+          <div class="stat-value warn" id="end-time">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Прошло</div>
+          <div class="stat-value" id="elapsed">0 мин</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Статус</div>
+          <div class="stat-value warn">В процессе</div>
+        </div>
+      </div>
+
+      <hr/>
+
+      <label class="form-label">Уведомить меня о возобновлении</label>
+      <p class="form-hint">Пришлём одно письмо, как только всё будет готово.</p>
+      <div class="form-row">
+        <input type="email" id="email-input" placeholder="your@email.com"/>
+        <button id="notify-btn" onclick="handleNotify()">Уведомить</button>
+      </div>
+      <p class="feedback" id="feedback"></p>
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <span class="footer-copy">© 2025 dearfutureme.com</span>
+  </footer>
+
+  <script>
+    window.__MAINT__ = __MAINT_DATA__;
+  </script>
+
+  <script>
+    /* ── TIMES ── */
+    var maint = window.__MAINT__ || {};
+    var startTime = maint.start ? new Date(maint.start) : new Date();
+    if (isNaN(startTime)) startTime = new Date();
+    var endTime = maint.end ? new Date(maint.end) : null;
+    if (!endTime || isNaN(endTime)) endTime = new Date(startTime.getTime() + 2*60*60*1000);
+    var progress = Number(maint.progress);
+    if (!Number.isFinite(progress)) progress = 65;
+    progress = Math.max(0, Math.min(100, Math.round(progress)));
+
+    function pad(n){ return String(n).padStart(2,'0'); }
+    function fmt(d){ return pad(d.getHours())+':'+pad(d.getMinutes()); }
+
+    document.getElementById('start-time').textContent = fmt(startTime);
+    document.getElementById('end-time').textContent = fmt(endTime);
+    document.getElementById('progress-value').textContent = progress + '%';
+    var pf = document.querySelector('.progress-fill');
+    if (pf) pf.style.width = progress + '%';
+
+    function updateElapsed(){
+      var diff = Math.floor((Date.now()-startTime)/60000);
+      var el = document.getElementById('elapsed');
+      el.textContent = diff < 60 ? diff+' мин' : Math.floor(diff/60)+' ч '+(diff%60 ? diff%60+' мин' : '');
+    }
+    updateElapsed();
+    setInterval(updateElapsed, 30000);
+
+    /* ── FORM ── */
+    function handleNotify(){
+      var inp = document.getElementById('email-input');
+      var fb  = document.getElementById('feedback');
+      var btn = document.getElementById('notify-btn');
+      var email = inp.value.trim();
+      if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)){
+        fb.className='feedback error';
+        fb.textContent='Введите корректный email.';
+        return;
+      }
+      fb.className='feedback success';
+      fb.textContent='✓ Готово! Уведомим вас на '+email;
+      inp.value=''; inp.disabled=true; btn.disabled=true;
+    }
+    document.getElementById('email-input').addEventListener('keydown',function(e){
+      if(e.key==='Enter') handleNotify();
+    });
+
+    /* ── HERO CANVAS ANIMATION ── */
+    (function(){
+      var cv = document.getElementById('hero-canvas');
+      var ctx = cv.getContext('2d');
+      var W, H;
+
+      function resize(){
+        W = cv.width  = cv.offsetWidth;
+        H = cv.height = cv.offsetHeight;
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      /* Floating nodes + connecting lines */
+      var nodes = [];
+      var NODE_COUNT = 28;
+
+      function Node(){
+        this.x  = Math.random()*W;
+        this.y  = Math.random()*H;
+        this.vx = (Math.random()-.5)*0.4;
+        this.vy = (Math.random()-.5)*0.4;
+        this.r  = Math.random()*2+1;
+        this.a  = Math.random();
+      }
+      Node.prototype.tick = function(){
+        this.x += this.vx;
+        this.y += this.vy;
+        if(this.x<0||this.x>W) this.vx*=-1;
+        if(this.y<0||this.y>H) this.vy*=-1;
+      };
+
+      for(var i=0;i<NODE_COUNT;i++) nodes.push(new Node());
+
+      /* Gear SVG path helper — drawn with arc + lines */
+      function drawGear(cx, cy, outerR, innerR, teeth, angle){
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(angle);
+        ctx.beginPath();
+        var step = (Math.PI*2)/teeth;
+        for(var i=0;i<teeth;i++){
+          var a0 = i*step - step*.3;
+          var a1 = i*step + step*.3;
+          ctx.lineTo(Math.cos(a0)*innerR, Math.sin(a0)*innerR);
+          ctx.lineTo(Math.cos(a0)*outerR, Math.sin(a0)*outerR);
+          ctx.lineTo(Math.cos(a1)*outerR, Math.sin(a1)*outerR);
+          ctx.lineTo(Math.cos(a1)*innerR, Math.sin(a1)*innerR);
+        }
+        ctx.closePath();
+        ctx.restore();
+      }
+
+      var gears = [
+        { x: W*.72, y: H*.38, outerR: 52, innerR: 36, teeth: 10, speed:  .004, a: 0 },
+        { x: W*.72+82, y: H*.38+14, outerR: 30, innerR: 21, teeth: 7,  speed: -.007, a: 0 },
+        { x: W*.72-60, y: H*.38+55, outerR: 22, innerR: 15, teeth: 6,  speed:  .009, a: 0 }
+      ];
+
+      /* Orbiting dots */
+      var orbs = [
+        { cx: W*.25, cy: H*.5, r: 60, speed: .008, a: 0,    size: 3 },
+        { cx: W*.25, cy: H*.5, r: 95, speed:-.005, a: 1.2,  size: 2 },
+        { cx: W*.25, cy: H*.5, r:130, speed: .003, a: 2.4,  size: 2.5 }
+      ];
+
+      var tick = 0;
+
+      function draw(){
+        tick++;
+        ctx.clearRect(0,0,W,H);
+
+        /* ── NETWORK LINES ── */
+        ctx.lineWidth=1;
+        for(var i=0;i<nodes.length;i++){
+          nodes[i].tick();
+          for(var j=i+1;j<nodes.length;j++){
+            var dx=nodes[i].x-nodes[j].x, dy=nodes[i].y-nodes[j].y;
+            var dist=Math.sqrt(dx*dx+dy*dy);
+            if(dist<140){
+              var alpha=(1-dist/140)*0.18;
+              ctx.strokeStyle='rgba(251,191,36,'+alpha+')';
+              ctx.beginPath();
+              ctx.moveTo(nodes[i].x,nodes[i].y);
+              ctx.lineTo(nodes[j].x,nodes[j].y);
+              ctx.stroke();
+            }
+          }
+        }
+
+        /* ── NODES ── */
+        for(var k=0;k<nodes.length;k++){
+          ctx.beginPath();
+          ctx.arc(nodes[k].x,nodes[k].y,nodes[k].r,0,Math.PI*2);
+          ctx.fillStyle='rgba(251,191,36,0.55)';
+          ctx.fill();
+        }
+
+        /* ── GEARS ── */
+        gears[0].x=W*.72; gears[0].y=H*.38;
+        gears[1].x=W*.72+82; gears[1].y=H*.38+14;
+        gears[2].x=W*.72-60; gears[2].y=H*.38+55;
+
+        gears.forEach(function(g){
+          g.a += g.speed;
+          drawGear(g.x, g.y, g.outerR, g.innerR, g.teeth, g.a);
+          ctx.strokeStyle='rgba(251,191,36,0.18)';
+          ctx.lineWidth=1.5;
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(g.x,g.y,g.innerR*.45,0,Math.PI*2);
+          ctx.strokeStyle='rgba(251,191,36,0.12)';
+          ctx.lineWidth=1;
+          ctx.stroke();
+        });
+
+        /* ── ORBITS ── */
+        orbs[0].cx=W*.25; orbs[0].cy=H*.5;
+        orbs[1].cx=W*.25; orbs[1].cy=H*.5;
+        orbs[2].cx=W*.25; orbs[2].cy=H*.5;
+
+        orbs.forEach(function(o){
+          o.a += o.speed;
+          ctx.beginPath();
+          ctx.arc(o.cx,o.cy,o.r,0,Math.PI*2);
+          ctx.strokeStyle='rgba(255,255,255,0.05)';
+          ctx.lineWidth=1;
+          ctx.stroke();
+          var dx=o.cx+Math.cos(o.a)*o.r;
+          var dy=o.cy+Math.sin(o.a)*o.r;
+          ctx.beginPath();
+          ctx.arc(dx,dy,o.size,0,Math.PI*2);
+          ctx.fillStyle='rgba(249,115,22,0.8)';
+          ctx.fill();
+        });
+
+        /* ── HORIZONTAL SCAN LINE ── */
+        var scanY = ((tick*0.4) % (H+20)) - 10;
+        var sg = ctx.createLinearGradient(0,scanY-8,0,scanY+8);
+        sg.addColorStop(0,'rgba(251,191,36,0)');
+        sg.addColorStop(.5,'rgba(251,191,36,0.06)');
+        sg.addColorStop(1,'rgba(251,191,36,0)');
+        ctx.fillStyle=sg;
+        ctx.fillRect(0,scanY-8,W,16);
+
+        requestAnimationFrame(draw);
+      }
+      draw();
+    })();
+  </script>
+
+</body>
+</html>

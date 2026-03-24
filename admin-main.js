@@ -940,14 +940,37 @@ function applySettingsData(settings,persist){
   if(!settings)return;
   var name=(settings.siteName||settings.name||'').trim();
   var email=(settings.supportEmail||settings.email||'').trim();
+  var maintEnabled=!!settings.maintenanceEnabled;
+  var maintStart=settings.maintenanceStart||'';
+  var maintEnd=settings.maintenanceEnd||'';
+  var maintProgress=(settings.maintenanceProgress===0||settings.maintenanceProgress)?String(settings.maintenanceProgress):'';
   if(persist){
     if(name) localStorage.setItem('adminSiteName',name); else localStorage.removeItem('adminSiteName');
     if(email) localStorage.setItem('adminSupportEmail',email); else localStorage.removeItem('adminSupportEmail');
+    localStorage.setItem('adminMaintEnabled',maintEnabled?'1':'0');
+    if(maintStart) localStorage.setItem('adminMaintStart',maintStart); else localStorage.removeItem('adminMaintStart');
+    if(maintEnd) localStorage.setItem('adminMaintEnd',maintEnd); else localStorage.removeItem('adminMaintEnd');
+    if(maintProgress!=='') localStorage.setItem('adminMaintProgress',maintProgress); else localStorage.removeItem('adminMaintProgress');
   }
   var nameInput=document.getElementById('siteNameInput');
   var emailInput=document.getElementById('supportEmailInput');
   if(nameInput && name)nameInput.value=name;
   if(emailInput && email)emailInput.value=email;
+  var maintEnabledInput=document.getElementById('maintEnabledInput');
+  var maintStartInput=document.getElementById('maintStartInput');
+  var maintEndInput=document.getElementById('maintEndInput');
+  var maintProgressInput=document.getElementById('maintProgressInput');
+  function toLocalInput(val){
+    if(!val)return '';
+    var d=new Date(val);
+    if(isNaN(d))return '';
+    function p(n){return String(n).padStart(2,'0');}
+    return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes());
+  }
+  if(maintEnabledInput) maintEnabledInput.value=maintEnabled?'1':'0';
+  if(maintStartInput) maintStartInput.value=toLocalInput(maintStart);
+  if(maintEndInput) maintEndInput.value=toLocalInput(maintEnd);
+  if(maintProgressInput && maintProgress!=='') maintProgressInput.value=maintProgress;
   if(name){
     document.title=name+' ? Admin';
     var sbTitle=document.querySelector('.sb-title');
@@ -958,17 +981,29 @@ function applySettingsData(settings,persist){
 function applyStoredSettings(){
   var name=localStorage.getItem('adminSiteName')||'';
   var email=localStorage.getItem('adminSupportEmail')||'';
-  applySettingsData({siteName:name,supportEmail:email},false);
+  var maintEnabled=localStorage.getItem('adminMaintEnabled')==='1';
+  var maintStart=localStorage.getItem('adminMaintStart')||'';
+  var maintEnd=localStorage.getItem('adminMaintEnd')||'';
+  var maintProgress=localStorage.getItem('adminMaintProgress');
+  applySettingsData({siteName:name,supportEmail:email,maintenanceEnabled:maintEnabled,maintenanceStart:maintStart,maintenanceEnd:maintEnd,maintenanceProgress:maintProgress},false);
 }
 
 function initSettingsInputs(){
   var nameInput=document.getElementById('siteNameInput');
   var emailInput=document.getElementById('supportEmailInput');
+  var maintEnabledInput=document.getElementById('maintEnabledInput');
+  var maintStartInput=document.getElementById('maintStartInput');
+  var maintEndInput=document.getElementById('maintEndInput');
+  var maintProgressInput=document.getElementById('maintProgressInput');
   var t=null;
   function save(){
     var payload={
       siteName:(nameInput&&nameInput.value||'').trim(),
-      supportEmail:(emailInput&&emailInput.value||'').trim()
+      supportEmail:(emailInput&&emailInput.value||'').trim(),
+      maintenanceEnabled:maintEnabledInput?maintEnabledInput.value==='1':undefined,
+      maintenanceStart:maintStartInput?maintStartInput.value:'',
+      maintenanceEnd:maintEndInput?maintEndInput.value:'',
+      maintenanceProgress:maintProgressInput?maintProgressInput.value:''
     };
     if(payload.siteName){
       document.title=payload.siteName+' ? Admin';
@@ -977,6 +1012,10 @@ function initSettingsInputs(){
     }
     if(payload.siteName) localStorage.setItem('adminSiteName',payload.siteName); else localStorage.removeItem('adminSiteName');
     if(payload.supportEmail) localStorage.setItem('adminSupportEmail',payload.supportEmail); else localStorage.removeItem('adminSupportEmail');
+    if(maintEnabledInput) localStorage.setItem('adminMaintEnabled',payload.maintenanceEnabled?'1':'0');
+    if(payload.maintenanceStart) localStorage.setItem('adminMaintStart',payload.maintenanceStart); else localStorage.removeItem('adminMaintStart');
+    if(payload.maintenanceEnd) localStorage.setItem('adminMaintEnd',payload.maintenanceEnd); else localStorage.removeItem('adminMaintEnd');
+    if(payload.maintenanceProgress!=='' && payload.maintenanceProgress!==undefined) localStorage.setItem('adminMaintProgress',String(payload.maintenanceProgress)); else localStorage.removeItem('adminMaintProgress');
     if(t)clearTimeout(t);
     t=setTimeout(function(){
       apiAdmin('/api/admin/settings',{method:'POST',body:JSON.stringify(payload)}).catch(function(){});
@@ -991,6 +1030,23 @@ function initSettingsInputs(){
     emailInput.addEventListener('input',save);
     emailInput.addEventListener('change',save);
     emailInput.addEventListener('blur',save);
+  }
+  if(maintEnabledInput){
+    maintEnabledInput.addEventListener('change',save);
+    maintEnabledInput.addEventListener('blur',save);
+  }
+  if(maintStartInput){
+    maintStartInput.addEventListener('change',save);
+    maintStartInput.addEventListener('blur',save);
+  }
+  if(maintEndInput){
+    maintEndInput.addEventListener('change',save);
+    maintEndInput.addEventListener('blur',save);
+  }
+  if(maintProgressInput){
+    maintProgressInput.addEventListener('input',save);
+    maintProgressInput.addEventListener('change',save);
+    maintProgressInput.addEventListener('blur',save);
   }
 }
 

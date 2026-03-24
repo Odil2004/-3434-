@@ -72,7 +72,11 @@ const defaultStore = {
   },
   adminSettings: {
     siteName: "DearFutureMe",
-    supportEmail: "support@dearfutureme.com"
+    supportEmail: "support@dearfutureme.com",
+    maintenanceEnabled: false,
+    maintenanceStart: "",
+    maintenanceEnd: "",
+    maintenanceProgress: 65
   },
   liveReactions: {
     likes: 0,
@@ -122,6 +126,41 @@ function sendNotFoundPage(res) {
   }
 }
 
+function sendMaintenancePage(res, settings) {
+  try {
+    const template = fs.readFileSync(path.join(rootDir, "maintenance.html"), "utf8");
+    const progressRaw = Number(settings && settings.maintenanceProgress);
+    const progress = Number.isFinite(progressRaw) ? Math.max(0, Math.min(100, Math.round(progressRaw))) : 65;
+    const payload = {
+      start: settings && settings.maintenanceStart ? String(settings.maintenanceStart) : "",
+      end: settings && settings.maintenanceEnd ? String(settings.maintenanceEnd) : "",
+      progress
+    };
+    const html = template.replace("__MAINT_DATA__", JSON.stringify(payload));
+    res.status(503);
+    res.set("Content-Type", "text/html; charset=UTF-8");
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.set("Pragma", "no-cache");
+    res.set("Expires", "0");
+    res.send(html);
+  } catch (_) {
+    res.status(503).send("Maintenance");
+  }
+}
+
+async function isAdminRequest(req) {
+  const token = getAuthTokenFromReq(req);
+  if (!token) return false;
+  try {
+    const payload = jwt.verify(token, jwtSecret);
+    const store = await readStore();
+    const user = store.users.find((entry) => entry.id === payload.sub);
+    return Boolean(user && isAdminEmail(user.email));
+  } catch (_) {
+    return false;
+  }
+}
+
 app.use(async (req, res, next) => {
   if (req.path === "/admin" || req.path === "/admin.html" || req.path.startsWith("/admin-panel")) {
     const token = getAuthTokenFromReq(req);
@@ -140,6 +179,22 @@ app.use(async (req, res, next) => {
     }
   }
   return next();
+});
+
+app.use(async (req, res, next) => {
+  try {
+    const store = await readStore();
+    const settings = store.adminSettings || defaultStore.adminSettings;
+    if (!settings || !settings.maintenanceEnabled) return next();
+    const adminAllowed = await isAdminRequest(req);
+    if (adminAllowed) return next();
+    if (req.path.startsWith("/api/")) {
+      return res.status(503).json({ error: "Maintenance" });
+    }
+    return sendMaintenancePage(res, settings);
+  } catch (_) {
+    return next();
+  }
 });
 
 app.use(
@@ -300,6 +355,8 @@ function getAdminEmails() {
       [
         process.env.SMTP_USER,
         "dearfuturemeportal@gmail.com",
+        "irodaap721@gmail.com",
+        "odylanvarhodzaev4@gmail.com",
         ...(String(process.env.ADMIN_EMAILS || "")
           .split(",")
           .map((value) => value.trim())
@@ -2987,11 +3044,26 @@ app.post("/api/admin/settings", authRequired, adminRequired, async (req, res) =>
   try {
     const store = await readStore();
     const payload = req.body || {};
+    const prevSettings = store.adminSettings || defaultStore.adminSettings;
+    let maintenanceEnabled = prevSettings.maintenanceEnabled;
+    if (typeof payload.maintenanceEnabled === "boolean") {
+      maintenanceEnabled = payload.maintenanceEnabled;
+    } else if (payload.maintenanceEnabled !== undefined) {
+      maintenanceEnabled = String(payload.maintenanceEnabled).trim() === "1" || String(payload.maintenanceEnabled).trim().toLowerCase() === "true";
+    }
+    const progressRaw = payload.maintenanceProgress;
+    let progress = Number(progressRaw);
+    if (!Number.isFinite(progress)) progress = prevSettings.maintenanceProgress ?? defaultStore.adminSettings.maintenanceProgress;
+    progress = Math.max(0, Math.min(100, Math.round(Number(progress))));
     store.adminSettings = {
       ...defaultStore.adminSettings,
       ...store.adminSettings,
       siteName: String(payload.siteName || "").trim() || store.adminSettings?.siteName || defaultStore.adminSettings.siteName,
-      supportEmail: String(payload.supportEmail || "").trim() || store.adminSettings?.supportEmail || defaultStore.adminSettings.supportEmail
+      supportEmail: String(payload.supportEmail || "").trim() || store.adminSettings?.supportEmail || defaultStore.adminSettings.supportEmail,
+      maintenanceEnabled,
+      maintenanceStart: payload.maintenanceStart !== undefined ? String(payload.maintenanceStart || "").trim() : (prevSettings.maintenanceStart || ""),
+      maintenanceEnd: payload.maintenanceEnd !== undefined ? String(payload.maintenanceEnd || "").trim() : (prevSettings.maintenanceEnd || ""),
+      maintenanceProgress: progress
     };
     await writeStore(store);
     res.json({ ok: true, settings: store.adminSettings });
