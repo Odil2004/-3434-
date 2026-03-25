@@ -565,23 +565,10 @@ async function sendTelegramStart(chatId) {
   if (!telegramToken || !chatId) return;
   const caption = buildTelegramCaptionEntities();
   if (telegramPhotoUrl) {
-    if (caption.entities && caption.entities.length) {
-      const photoRes = await telegramApi("sendPhoto", {
-        chat_id: chatId,
-        photo: telegramPhotoUrl,
-        caption: caption.text,
-        caption_entities: caption.entities,
-        reply_markup: telegramKeyboard()
-      });
-      if (photoRes && photoRes.ok) return;
-    }
-    const photoResPlain = await telegramApi("sendPhoto", {
+    await telegramApi("sendPhoto", {
       chat_id: chatId,
-      photo: telegramPhotoUrl,
-      caption: telegramStartCaption,
-      reply_markup: telegramKeyboard()
+      photo: telegramPhotoUrl
     });
-    if (photoResPlain && photoResPlain.ok) return;
   }
   const messageRes = await telegramApi("sendMessage", {
     chat_id: chatId,
