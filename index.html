@@ -375,11 +375,12 @@ body.premium-active .pn{background:linear-gradient(90deg,rgba(196,147,63,.11),rg
 .chat-msg{margin-bottom:10px;font-size:.86rem}
 .chat-msg.you{color:var(--gold-l)}
 .chat-msg.ai{color:var(--parchment);opacity:.8}
-.avatar-card{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.avatar-card{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin:12px 0 18px}
 .avatar-circle{width:88px;height:88px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:1.6rem;color:var(--parchment);border:1px solid rgba(196,147,63,.35);box-shadow:0 10px 26px rgba(0,0,0,.25)}
 .avatar-meta{flex:1;min-width:200px}
 .avatar-title{font-family:'Cormorant Garamond',serif;font-size:1.2rem;margin-bottom:6px}
 .avatar-note{font-size:.82rem;opacity:.55;line-height:1.6}
+.avatar-email{display:block;font-size:.78rem;opacity:.7;margin-top:6px}
 .avatar-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
 .ghost-btn{font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.14em;text-transform:uppercase;background:transparent;color:var(--gold-l);border:1px solid rgba(196,147,63,.25);padding:10px 14px;cursor:pointer;transition:all .2s}
 .ghost-btn:hover{background:rgba(196,147,63,.08);border-color:var(--gold)}
@@ -1589,6 +1590,16 @@ body.premium-active .site-footer{background:linear-gradient(180deg,rgba(21,15,9,
       <div class="prcard">
         <div class="prname" id="prname"></div>
         <div class="prmail" id="premail"></div>
+        <div class="avatar-card">
+          <div class="avatar-circle" id="avatarCircle">ME</div>
+          <div class="avatar-meta">
+            <div class="avatar-title" id="avatarTitle"></div>
+            <div class="avatar-note" id="avatarNote"></div>
+            <div class="avatar-actions">
+              <button class="ghost-btn" id="avatarBtn" onclick="generateAvatar()"></button>
+            </div>
+          </div>
+        </div>
         <div class="prstats">
           <div class="prstat"><span class="prnum" id="prcaps">0</span><span class="prlabel" id="prcapsl"></span></div>
           <div class="prstat"><span class="prnum" id="prpub">0</span><span class="prlabel" id="prpubl"></span></div>
@@ -3824,6 +3835,12 @@ function hashString(value){
     if(!circle||!title||!note||!btn)return;
     title.textContent=t.avatarTitle||'Future Self Avatar';
     note.textContent=hasPremium()?(t.avatarNote||'Generate a future-self avatar based on your name.'):(t.avatarLocked||'Premium only: unlock the avatar.');
+    if(user?.email){
+      const emailLine=document.createElement('span');
+      emailLine.className='avatar-email';
+      emailLine.textContent=`${t.profileEmail||'Email'}: ${user.email}`;
+      note.appendChild(emailLine);
+    }
     btn.textContent=t.avatarBtn||'Generate avatar';
     btn.disabled=!hasPremium();
     const initials=(user?.name||'Me').trim().split(/\s+/).slice(0,2).map(s=>s[0]?.toUpperCase()||'').join('')||'ME';
