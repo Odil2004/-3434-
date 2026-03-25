@@ -744,6 +744,13 @@ function serializeCapsule(capsule) {
 }
 
 function serializePublicCapsule(capsule) {
+  if (!capsule.likedBy || typeof capsule.likedBy !== "object") {
+    capsule.likedBy = {};
+  }
+  const likesCount = Number.isFinite(Number(capsule.likesCount))
+    ? Math.max(0, Number(capsule.likesCount))
+    : Object.keys(capsule.likedBy).length;
+  capsule.likesCount = likesCount;
   return {
     id: capsule.id,
     userId: capsule.userId,
@@ -761,6 +768,7 @@ function serializePublicCapsule(capsule) {
     emotion: capsule.emotion || null,
     futureScene: capsule.futureScene || null,
     createdAt: capsule.createdAt,
+    likes: likesCount,
     city: capsule.city,
     lat: capsule.lat,
     lng: capsule.lng
@@ -3951,11 +3959,16 @@ app.get("/api/capsules", authRequired, async (req, res) => {
   res.json({ capsules });
 });
 
-app.get("/api/public-capsules", async (_req, res) => {
+app.get("/api/public-capsules", authOptional, async (req, res) => {
   const store = await readStore();
+  const userId = req.user ? req.user.id : null;
   const capsules = store.capsules
     .filter((capsule) => capsule.visibility === "public")
-    .map(serializePublicCapsule);
+    .map((capsule) => {
+      const base = serializePublicCapsule(capsule);
+      const liked = userId && capsule.likedBy ? Boolean(capsule.likedBy[userId]) : false;
+      return { ...base, liked };
+    });
 
   res.json({ capsules });
 });
@@ -4073,26 +4086,28 @@ app.post("/api/capsules", authRequired, async (req, res) => {
     return res.status(400).json({ error: "Unsafe or abusive content is not allowed" });
   }
 
-  const capsule = {
-    id: crypto.randomUUID(),
-    userId: req.user.id,
-    name,
-    email,
-    message,
-    openDate,
-    visibility,
-    prediction,
-    style,
-    photoUrl: photoUrl || null,
-    videoUrl: videoUrl || null,
-    audioUrl: audioUrl || null,
-    hunt,
-    secretHash,
-    emoji: emoji || null,
-    emotion: null,
-    futureScene: null,
-    createdAt: new Date().toISOString(),
-    city,
+    const capsule = {
+      id: crypto.randomUUID(),
+      userId: req.user.id,
+      name,
+      email,
+      message,
+      openDate,
+      visibility,
+      prediction,
+      style,
+      photoUrl: photoUrl || null,
+      videoUrl: videoUrl || null,
+      audioUrl: audioUrl || null,
+      hunt,
+      secretHash,
+      likesCount: 0,
+      likedBy: {},
+      emoji: emoji || null,
+      emotion: null,
+      futureScene: null,
+      createdAt: new Date().toISOString(),
+      city,
     lat: Number.isFinite(lat) ? lat : 0,
     lng: Number.isFinite(lng) ? lng : 0,
     deliveredAt: null
@@ -4146,6 +4161,46 @@ app.post("/api/capsules/open", authRequired, async (req, res) => {
   }
 
   res.json({ capsule: serializeCapsule(capsule) });
+});
+
+app.post("/api/capsules/like", authRequired, async (req, res) => {
+  const id = String(req.body.id || "").trim();
+  const action = String(req.body.action || "like").toLowerCase();
+  if (!id) {
+    return res.status(400).json({ error: "Capsule id is required" });
+  }
+  if (!["like", "unlike"].includes(action)) {
+    return res.status(400).json({ error: "Invalid action" });
+  }
+  const store = await readStore();
+  const capsule = store.capsules.find((entry) => entry.id === id);
+  if (!capsule) {
+    return res.status(404).json({ error: "Capsule not found" });
+  }
+  if (capsule.visibility !== "public") {
+    return res.status(403).json({ error: "Capsule is not public" });
+  }
+  if (capsule.userId === req.user.id) {
+    return res.status(403).json({ error: "Author cannot like own capsule" });
+  }
+  if (!capsule.likedBy || typeof capsule.likedBy !== "object") {
+    capsule.likedBy = {};
+  }
+  let likesCount = Number.isFinite(Number(capsule.likesCount))
+    ? Math.max(0, Number(capsule.likesCount))
+    : Object.keys(capsule.likedBy).length;
+  const prev = Boolean(capsule.likedBy[req.user.id]);
+  if (action === "like" && !prev) {
+    capsule.likedBy[req.user.id] = true;
+    likesCount += 1;
+  }
+  if (action === "unlike" && prev) {
+    delete capsule.likedBy[req.user.id];
+    likesCount = Math.max(0, likesCount - 1);
+  }
+  capsule.likesCount = likesCount;
+  await writeStore(store);
+  return res.json({ likes: likesCount, liked: Boolean(capsule.likedBy[req.user.id]) });
 });
 
 function isAuthorizedJob(req) {

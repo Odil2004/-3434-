@@ -210,6 +210,11 @@ body.premium-active .lt{border-color:rgba(232,201,122,.18);background:rgba(232,2
 .sl-cta::after{content:'→';transition:transform .2s}
 .sl-cta:hover::after{transform:translateX(4px)}
 .sl-cta[disabled]{opacity:.45;cursor:not-allowed;pointer-events:none;border-color:rgba(196,147,63,.2);color:rgba(232,201,122,.7)}
+.sl-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sl-like-btn{display:inline-flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;font-size:.56rem;letter-spacing:.14em;text-transform:uppercase;background:rgba(196,147,63,.08);border:1px solid rgba(196,147,63,.25);color:var(--gold-l);padding:10px 14px;cursor:pointer;transition:all .2s}
+.sl-like-btn:hover{background:rgba(196,147,63,.18);border-color:var(--gold)}
+.sl-like-btn.on{background:rgba(196,147,63,.22);border-color:var(--gold)}
+.sl-like-btn[disabled]{opacity:.45;cursor:not-allowed;pointer-events:none}
 .slider-bar{display:flex;align-items:center;justify-content:space-between;padding:28px 60px;border-top:1px solid rgba(245,240,232,.05);background:rgba(8,5,2,.6);backdrop-filter:blur(8px)}
 .slider-thumbs{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;flex:1;padding-right:32px}
 .slider-thumbs::-webkit-scrollbar{display:none}
@@ -974,7 +979,9 @@ body.premium-active .site-footer{background:linear-gradient(180deg,rgba(21,15,9,
     .sl-slide{align-items:flex-start}
     .sl-content{max-width:100%;padding:28px 18px 380px}
     .sl-quote{-webkit-line-clamp:2;margin-bottom:18px}
-    .sl-cta{margin-bottom:18px}
+    .sl-actions{flex-direction:column;align-items:stretch}
+    .sl-cta{margin-bottom:0;width:100%;justify-content:center}
+    .sl-like-btn{width:100%;justify-content:center}
     .sl-cap-wrap{display:block;right:auto;left:50%;top:auto;bottom:-18px;transform:translate(-50%,20px) scale(.62);z-index:3}
     .sl-slide.active .sl-cap-wrap{opacity:1;transform:translate(-50%,6px) scale(.66)}
     .sl-capsule{width:76px;height:168px}
@@ -1013,7 +1020,9 @@ body.premium-active .site-footer{background:linear-gradient(180deg,rgba(21,15,9,
       .sl-quote{font-size:.82rem;-webkit-line-clamp:2;margin-bottom:16px}
       .sl-slide{align-items:flex-start}
       .sl-content{padding:26px 12px 360px}
-      .sl-cta{margin-bottom:20px}
+      .sl-actions{flex-direction:column;align-items:stretch}
+      .sl-cta{margin-bottom:0;width:100%;justify-content:center}
+      .sl-like-btn{width:100%;justify-content:center}
       .sl-cap-wrap{bottom:-24px;transform:translate(-50%,22px) scale(.58);z-index:3}
       .sl-slide.active .sl-cap-wrap{transform:translate(-50%,8px) scale(.62)}
       .sl-capsule{width:70px;height:154px}
@@ -4957,6 +4966,34 @@ function showRnd(){
   if(mapInst&&r.lat&&r.lng){mapInst.setView([r.lat,r.lng],5,{animate:true,duration:1.2});setTimeout(()=>openM(r.id),900)}
   else openM(r.id);
 }
+
+function updateLikeUI(id){
+  const c=publicCaps.find(x=>x.id===id);
+  if(!c)return;
+  document.querySelectorAll(`[data-like-id="${id}"]`).forEach(btn=>{
+    btn.classList.toggle('on',!!c.liked);
+  });
+  document.querySelectorAll(`[data-like-count="${id}"]`).forEach(el=>{
+    el.textContent=Number(c.likes||0);
+  });
+}
+
+async function toggleCapsuleLike(id){
+  const t=gt(lang);
+  if(!authToken){showToast('!',(t.loginRequired||'Войдите, чтобы ставить реакцию.'));go('auth');return;}
+  const c=publicCaps.find(x=>x.id===id);
+  if(!c)return;
+  if(user && c.userId===user.id){showToast('!',t.ownMapButton||'Недоступно автору');return;}
+  const action=c.liked?'unlike':'like';
+  try{
+    const data=await api('/api/capsules/like',{method:'POST',body:JSON.stringify({id,action})});
+    c.likes=Number(data.likes||0);
+    c.liked=!!data.liked;
+    updateLikeUI(id);
+  }catch(e){
+    showToast('!',e.message||'Unable to like');
+  }
+}
 function zoomMap(delta){if(mapInst)delta>0?mapInst.zoomIn():mapInst.zoomOut()}
 function resetMapView(){if(mapInst)mapInst.setView([20,10],2,{animate:true,duration:1})}
 
@@ -5564,9 +5601,14 @@ function buildSlider(){
           <div class="sl-name">${name}</div>
           <div class="sl-quote">${msg || '—'}</div>
           ${pred ? `<div class="sl-pred">${pred}</div>` : ''}
-          ${isOwn
-            ? `<button class="sl-cta" type="button" disabled>${t.ownMapButton || 'Недоступно автору'}</button>`
-            : `<button class="sl-cta" onclick="openM('${c.id}')">${t.sliderRead || 'Read capsule'}</button>`}
+          <div class="sl-actions">
+            ${isOwn
+              ? `<button class="sl-cta" type="button" disabled>${t.ownMapButton || 'Недоступно автору'}</button>`
+              : `<button class="sl-cta" onclick="openM('${c.id}')">${t.sliderRead || 'Read capsule'}</button>`}
+            <button class="sl-like-btn ${c.liked ? 'on' : ''}" data-like-id="${c.id}" onclick="toggleCapsuleLike('${c.id}')">
+              ♥ <span class="sl-like-count" data-like-count="${c.id}">${Number(c.likes || 0)}</span>
+            </button>
+          </div>
         </div>
       <div class="sl-cap-wrap" style="--cap-glow:${th.glow}">
         <div class="sl-sparks">${sparks}</div>
