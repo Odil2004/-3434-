@@ -53,12 +53,19 @@ const telegramWebAppUrl = String(process.env.TELEGRAM_WEB_APP_URL || "https://de
 const telegramPhotoUrl = String(process.env.TELEGRAM_PHOTO_URL || "").trim() || `${appBaseUrl}/telegram-cover.png`;
 const telegramStartCaption = String(
   process.env.TELEGRAM_START_CAPTION ||
-  "✨ DearFutureMe  личная капсула времени прямо в Telegram.\n\n" +
-  "📝 Напиши послание будущему себе  о мечтах, целях или важных мыслях.\n" +
-  "🔒 Запечатай капсулу и выбери дату открытия.\n" +
-  "⏳ Когда время придёт  письмо вернётся и напомнит, каким ты был и к чему шёл.\n\n" +
-  "Нажми кнопку ниже, чтобы открыть веб‑приложение и создать свою капсулу. 🚀"
+  "DearFutureMe  личная капсула времени прямо в Telegram.\n\n" +
+  "Напиши послание будущему себе  о мечтах, целях или важных мыслях.\n" +
+  "Запечатай капсулу и выбери дату открытия.\n" +
+  "Когда время придёт  письмо вернётся и напомнит, каким ты был и к чему шёл.\n\n" +
+  "Нажми кнопку ниже, чтобы открыть веб‑приложение и создать свою капсулу."
 ).trim();
+const telegramEmojiIds = [
+  "5325547803936572038",
+  "5897737086710059363",
+  "5208655754965304255",
+  "5298768060075750824",
+  "5372917041193828849"
+];
 const bannerFileName = "DearFutureMe.png";
 const bannerFilePath = path.join(rootDir, bannerFileName);
 const bannerUrl = `${appBaseUrl}/${encodeURIComponent(bannerFileName)}`;
@@ -524,18 +531,51 @@ function telegramKeyboard() {
   };
 }
 
+function buildTelegramCaption() {
+  const useCustom = telegramEmojiIds.every((id) => id && id.trim());
+  if (!useCustom) {
+    return { text: telegramStartCaption, entities: [] };
+  }
+  const e = telegramEmojiIds;
+  const dot = "•";
+  const lines = [
+    `${dot} DearFutureMe  личная капсула времени прямо в Telegram.`,
+    "",
+    `${dot} Напиши послание будущему себе  о мечтах, целях или важных мыслях.`,
+    `${dot} Запечатай капсулу и выбери дату открытия.`,
+    `${dot} Когда время придёт  письмо вернётся и напомнит, каким ты был и к чему шёл.`,
+    "",
+    `Нажми кнопку ниже, чтобы открыть веб‑приложение и создать свою капсулу. ${dot}`
+  ];
+  const text = lines.join("\n");
+  const entities = [];
+  let searchIndex = 0;
+  const ids = [e[0], e[1], e[2], e[3], e[4]];
+  ids.forEach((id) => {
+    const idx = text.indexOf(dot, searchIndex);
+    if (idx >= 0) {
+      entities.push({ type: "custom_emoji", offset: idx, length: 1, custom_emoji_id: id });
+      searchIndex = idx + 1;
+    }
+  });
+  return { text, entities };
+}
+
 async function sendTelegramStart(chatId) {
   if (!telegramToken || !chatId) return;
+  const caption = buildTelegramCaption();
   const messagePayload = {
     chat_id: chatId,
-    text: telegramStartCaption,
+    text: caption.text,
+    entities: caption.entities,
     reply_markup: telegramKeyboard()
   };
   if (telegramPhotoUrl) {
     const photoPayload = {
       chat_id: chatId,
       photo: telegramPhotoUrl,
-      caption: telegramStartCaption,
+      caption: caption.text,
+      caption_entities: caption.entities,
       reply_markup: telegramKeyboard()
     };
     const photoRes = await telegramApi("sendPhoto", photoPayload);
