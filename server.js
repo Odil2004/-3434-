@@ -802,9 +802,27 @@ function isValidAudioUrl(value) {
 
 function getStats(store) {
   const delivered = store.capsules.filter((capsule) => capsule.deliveredAt).length;
+  const geoCapsules = store.capsules.filter((capsule) => {
+    const lat = Number(capsule.lat);
+    const lng = Number(capsule.lng);
+    return (
+      capsule.visibility === "public" &&
+      Number.isFinite(lat) &&
+      Number.isFinite(lng) &&
+      lat !== 0 &&
+      lng !== 0 &&
+      !isPlaceholderCity(capsule.city)
+    );
+  });
+  const countrySet = new Set();
+  geoCapsules.forEach((capsule) => {
+    const parts = String(capsule.city || "").split(",");
+    const country = String(parts[parts.length - 1] || "").trim();
+    if (country) countrySet.add(country);
+  });
   return {
     sealed: store.capsules.length,
-    countries: 0,
+    countries: countrySet.size,
     delivered,
     users: store.users.length
   };

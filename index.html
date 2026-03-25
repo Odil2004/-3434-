@@ -120,11 +120,11 @@ body.premium-active .lt{border-color:rgba(232,201,122,.18);background:rgba(232,2
 /* HERO */
 .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px 40px 60px;position:relative;overflow:hidden}
 .hg{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 70% 50% at 50% 40%,rgba(196,147,63,.07) 0%,transparent 70%),radial-gradient(ellipse 40% 30% at 15% 85%,rgba(139,58,42,.05) 0%,transparent 60%)}
-.orbit{position:absolute;border-radius:50%;pointer-events:none;border:1px solid rgba(196,147,63,.07)}
+.orbit{position:absolute;left:50%;top:50%;border-radius:50%;pointer-events:none;border:1px solid rgba(196,147,63,.07)}
 .o1{width:550px;height:550px;animation:spin 70s linear infinite}
 .o2{width:850px;height:850px;animation:spin 110s linear infinite reverse;border-color:rgba(196,147,63,.04)}
 .o3{width:1150px;height:1150px;animation:spin 150s linear infinite;border-color:rgba(196,147,63,.025)}
-@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@keyframes spin{from{transform:translate(-50%,-50%) rotate(0)}to{transform:translate(-50%,-50%) rotate(360deg)}}
 .eyebrow{display:flex;align-items:center;gap:14px;font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);opacity:.75;margin-bottom:22px}
 .eyebrow::before,.eyebrow::after{content:'';width:36px;height:1px;background:var(--gold);opacity:.4}
 .ht{font-family:'Cormorant Garamond',serif;font-size:clamp(3.2rem,9vw,7.5rem);font-weight:300;line-height:1.05;color:var(--parchment);margin-bottom:8px}
