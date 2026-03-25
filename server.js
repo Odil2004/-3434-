@@ -46,6 +46,12 @@ const azureOpenAIEndpoint = String(process.env.AZURE_OPENAI_ENDPOINT || "").trim
 const azureOpenAIKey = String(process.env.AZURE_OPENAI_KEY || "").trim();
 const azureOpenAIDeployment = String(process.env.AZURE_OPENAI_DEPLOYMENT || "").trim();
 const azureOpenAIApiVersion = String(process.env.AZURE_OPENAI_API_VERSION || "2024-02-15-preview").trim();
+const telegramToken = String(process.env.TELEGRAM_BOT_TOKEN || "").trim();
+const telegramWebhookUrl = String(process.env.TELEGRAM_WEBHOOK_URL || "").trim();
+const telegramWebhookSecret = String(process.env.TELEGRAM_WEBHOOK_SECRET || "").trim();
+const telegramWebAppUrl = String(process.env.TELEGRAM_WEB_APP_URL || "https://dearfutureme1.onrender.com/").trim();
+const telegramPhotoUrl = String(process.env.TELEGRAM_PHOTO_URL || "").trim() || `${appBaseUrl}/telegram-cover.png`;
+const telegramStartCaption = String(process.env.TELEGRAM_START_CAPTION || "DearFutureMe — отправь письмо будущему себе.\nСоздай капсулу времени и получи сообщение в будущем.").trim();
 const bannerFileName = "DearFutureMe.png";
 const bannerFilePath = path.join(rootDir, bannerFileName);
 const bannerUrl = `${appBaseUrl}/${encodeURIComponent(bannerFileName)}`;
@@ -163,6 +169,25 @@ async function isAdminRequest(req) {
   }
 }
 
+app.post("/telegram/webhook", async (req, res) => {
+  if (!telegramToken) return res.status(404).json({ ok: true });
+  if (telegramWebhookSecret) {
+    const header = String(req.headers["x-telegram-bot-api-secret-token"] || "");
+    if (header !== telegramWebhookSecret) {
+      return res.status(401).json({ ok: false });
+    }
+  }
+  const update = req.body || {};
+  const message = update.message || update.edited_message;
+  if (message && message.chat && message.chat.id) {
+    const text = String(message.text || "");
+    if (text.startsWith("/start") || message.new_chat_members) {
+      await sendTelegramStart(message.chat.id);
+    }
+  }
+  return res.json({ ok: true });
+});
+
 app.use(async (req, res, next) => {
   if (req.path === "/admin" || req.path === "/admin.html" || req.path.startsWith("/admin-panel")) {
     const token = getAuthTokenFromReq(req);
@@ -203,6 +228,9 @@ app.use(async (req, res, next) => {
     if (maintenanceAllowedAssets.has(req.path)) return next();
     const adminAllowed = await isAdminRequest(req);
     if (adminAllowed) return next();
+    if (req.path.startsWith("/telegram/")) {
+      return next();
+    }
     if (req.path.startsWith("/api/maintenance")) {
       return next();
     }
@@ -463,6 +491,70 @@ function publicUser(user) {
     premiumSource: user.premiumSource || null,
     isAdmin: isAdminEmail(user.email)
   };
+}
+
+async function telegramApi(method, payload) {
+  if (!telegramToken) return null;
+  const response = await fetch(`https://api.telegram.org/bot${telegramToken}/${method}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload || {})
+  });
+  const data = await response.json().catch(() => ({}));
+  return data;
+}
+
+function telegramKeyboard() {
+  return {
+    inline_keyboard: [
+      [
+        {
+          text: "Открыть веб-приложение",
+          web_app: { url: telegramWebAppUrl }
+        }
+      ]
+    ]
+  };
+}
+
+async function sendTelegramStart(chatId) {
+  if (!telegramToken || !chatId) return;
+  const messagePayload = {
+    chat_id: chatId,
+    text: telegramStartCaption,
+    reply_markup: telegramKeyboard()
+  };
+  if (telegramPhotoUrl) {
+    const photoPayload = {
+      chat_id: chatId,
+      photo: telegramPhotoUrl,
+      caption: telegramStartCaption,
+      reply_markup: telegramKeyboard()
+    };
+    const photoRes = await telegramApi("sendPhoto", photoPayload);
+    if (photoRes && photoRes.ok) return;
+  }
+  await telegramApi("sendMessage", messagePayload);
+}
+
+async function ensureTelegramWebhook() {
+  if (!telegramToken || !telegramWebhookUrl) return;
+  const hookPayload = {
+    url: telegramWebhookUrl,
+    allowed_updates: ["message"]
+  };
+  if (telegramWebhookSecret) hookPayload.secret_token = telegramWebhookSecret;
+  await telegramApi("setWebhook", hookPayload);
+  await telegramApi("setMyCommands", {
+    commands: [{ command: "start", description: "Open DearFutureMe" }]
+  });
+  await telegramApi("setChatMenuButton", {
+    menu_button: {
+      type: "web_app",
+      text: "Открыть",
+      web_app: { url: telegramWebAppUrl }
+    }
+  });
 }
 
 function hasActivePremium(user) {
@@ -4348,6 +4440,9 @@ app.use((req, res) => {
 
     app.listen(port, () => {
       console.log(`DearFutureMe server running at ${appBaseUrl}`);
+    });
+    ensureTelegramWebhook().catch((error) => {
+      console.error("Telegram webhook setup failed:", error.message);
     });
 
     autoEndMaintenanceIfNeeded().catch((error) => {
