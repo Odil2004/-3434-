@@ -573,25 +573,19 @@ async function sendTelegramStart(chatId) {
     if (caption.entities && caption.entities.length) {
       const photoRes = await telegramApi("sendPhoto", {
         chat_id: chatId,
-        photo: telegramPhotoUrl
+        photo: telegramPhotoUrl,
+        caption: caption.text,
+        caption_entities: caption.entities,
+        reply_markup: telegramKeyboard()
       });
-      if (photoRes && photoRes.ok) {
-        const emojiMsg = await telegramApi("sendMessage", {
-          chat_id: chatId,
-          text: caption.text,
-          entities: caption.entities,
-          reply_markup: telegramKeyboard()
-        });
-        if (emojiMsg && emojiMsg.ok) return;
-      }
+      if (photoRes && photoRes.ok) return;
     }
-    const photoPayload = {
+    const photoResPlain = await telegramApi("sendPhoto", {
       chat_id: chatId,
       photo: telegramPhotoUrl,
       caption: telegramStartCaption,
       reply_markup: telegramKeyboard()
-    };
-    const photoResPlain = await telegramApi("sendPhoto", photoPayload);
+    });
     if (photoResPlain && photoResPlain.ok) return;
   }
   const messageRes = await telegramApi("sendMessage", {
