@@ -535,34 +535,6 @@ function telegramKeyboard() {
   };
 }
 
-let telegramEmojiCache = null;
-let telegramEmojiCacheAt = 0;
-
-async function getTelegramEmojiIds() {
-  const now = Date.now();
-  if (telegramEmojiCache && now - telegramEmojiCacheAt < 6 * 60 * 60 * 1000) {
-    return telegramEmojiCache;
-  }
-  if (!telegramEmojiIds.length || !telegramToken) {
-    telegramEmojiCache = [];
-    telegramEmojiCacheAt = now;
-    return telegramEmojiCache;
-  }
-  try {
-    const res = await telegramApi("getCustomEmojiStickers", { custom_emoji_ids: telegramEmojiIds });
-    if (res && res.ok && Array.isArray(res.result)) {
-      const returned = new Set(res.result.map((item) => item.custom_emoji_id).filter(Boolean));
-      telegramEmojiCache = telegramEmojiIds.filter((id) => returned.has(id));
-    } else {
-      telegramEmojiCache = [];
-    }
-  } catch (_e) {
-    telegramEmojiCache = [];
-  }
-  telegramEmojiCacheAt = now;
-  return telegramEmojiCache;
-}
-
 function buildTelegramCaption(customIds) {
   const ids = Array.isArray(customIds) ? customIds.filter(Boolean) : [];
   if (!ids.length) {
@@ -594,8 +566,7 @@ function buildTelegramCaption(customIds) {
 
 async function sendTelegramStart(chatId) {
   if (!telegramToken || !chatId) return;
-  const emojiIds = await getTelegramEmojiIds();
-  const caption = buildTelegramCaption(emojiIds);
+  const caption = buildTelegramCaption(telegramEmojiIds);
   const messagePayload = {
     chat_id: chatId,
     text: caption.text,
