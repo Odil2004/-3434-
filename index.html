@@ -376,7 +376,9 @@ body.premium-active .pn{background:linear-gradient(90deg,rgba(196,147,63,.11),rg
 .chat-msg.you{color:var(--gold-l)}
 .chat-msg.ai{color:var(--parchment);opacity:.8}
 .avatar-card{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin:12px 0 18px}
-.avatar-circle{width:88px;height:88px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:1.6rem;color:var(--parchment);border:1px solid rgba(196,147,63,.35);box-shadow:0 10px 26px rgba(0,0,0,.25)}
+.avatar-circle{width:88px;height:88px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:1.6rem;color:var(--parchment);border:1px solid rgba(196,147,63,.35);box-shadow:0 10px 26px rgba(0,0,0,.25);cursor:pointer;position:relative;overflow:hidden}
+.avatar-circle.is-empty::after{content:'+';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:rgba(245,240,232,.6);text-shadow:0 2px 6px rgba(0,0,0,.4)}
+.avatar-upload{display:none}
 .avatar-meta{flex:1;min-width:200px}
 .avatar-title{font-family:'Cormorant Garamond',serif;font-size:1.2rem;margin-bottom:6px}
 .avatar-note{font-size:.82rem;opacity:.55;line-height:1.6}
@@ -1591,14 +1593,8 @@ body.premium-active .site-footer{background:linear-gradient(180deg,rgba(21,15,9,
         <div class="prname" id="prname"></div>
         <div class="prmail" id="premail"></div>
         <div class="avatar-card">
-          <div class="avatar-circle" id="avatarCircle">ME</div>
-          <div class="avatar-meta">
-            <div class="avatar-title" id="avatarTitle"></div>
-            <div class="avatar-note" id="avatarNote"></div>
-            <div class="avatar-actions">
-              <button class="ghost-btn" id="avatarBtn" onclick="generateAvatar()"></button>
-            </div>
-          </div>
+          <div class="avatar-circle" id="avatarCircle" onclick="triggerAvatarUpload()" aria-label="Upload avatar">ME</div>
+          <input type="file" id="avatarUpload" class="avatar-upload" accept="image/*">
         </div>
         <div class="prstats">
           <div class="prstat"><span class="prnum" id="prcaps">0</span><span class="prlabel" id="prcapsl"></span></div>
@@ -3826,38 +3822,111 @@ function hashString(value){
   return h;
 }
 
+  function setAvatarFallback(circle, initials){
+    const seed=avatarSeed||hashString(user?.name||'future');
+    const hue=32+(seed%50);
+    circle.textContent=initials;
+    circle.style.backgroundImage='none';
+    circle.style.background=`radial-gradient(circle at 30% 30%, hsla(${hue},60%,65%,.55), hsla(${hue-8},60%,35%,.3))`;
+    circle.style.borderColor=`hsla(${hue},60%,55%,.55)`;
+    circle.classList.add('is-empty');
+  }
+
+  function applyAvatarImage(circle, url){
+    circle.textContent='';
+    circle.style.backgroundImage=`url(${url})`;
+    circle.style.backgroundSize='cover';
+    circle.style.backgroundPosition='center';
+    circle.style.backgroundRepeat='no-repeat';
+    circle.style.borderColor='rgba(196,147,63,.45)';
+    circle.classList.remove('is-empty');
+  }
+
+  function loadAvatarImage(url){
+    return new Promise((resolve,reject)=>{
+      const img=new Image();
+      img.referrerPolicy='no-referrer';
+      img.onload=()=>resolve(true);
+      img.onerror=()=>reject(new Error('load'));
+      img.src=url;
+    });
+  }
+
   function renderAvatar(){
-    const t=gt(lang);
     const circle=document.getElementById('avatarCircle');
-    const title=document.getElementById('avatarTitle');
-    const note=document.getElementById('avatarNote');
-    const btn=document.getElementById('avatarBtn');
-    if(!circle||!title||!note||!btn)return;
-    title.textContent=t.avatarTitle||'Future Self Avatar';
-    note.textContent=hasPremium()?(t.avatarNote||'Generate a future-self avatar based on your name.'):(t.avatarLocked||'Premium only: unlock the avatar.');
-    if(user?.email){
-      const emailLine=document.createElement('span');
-      emailLine.className='avatar-email';
-      emailLine.textContent=`${t.profileEmail||'Email'}: ${user.email}`;
-      note.appendChild(emailLine);
-    }
-    btn.textContent=t.avatarBtn||'Generate avatar';
-    btn.disabled=!hasPremium();
+    if(!circle)return;
     const initials=(user?.name||'Me').trim().split(/\s+/).slice(0,2).map(s=>s[0]?.toUpperCase()||'').join('')||'ME';
-    if(user?.avatarUrl){
-      circle.textContent='';
-      circle.style.backgroundImage=`url(${user.avatarUrl})`;
-      circle.style.backgroundSize='cover';
-      circle.style.backgroundPosition='center';
-      circle.style.backgroundRepeat='no-repeat';
-      circle.style.borderColor='rgba(196,147,63,.45)';
-    }else{
-      const seed=avatarSeed||hashString(user?.name||'future');
-      const hue=32+(seed%50);
-      circle.textContent=initials;
-      circle.style.backgroundImage='none';
-      circle.style.background=`radial-gradient(circle at 30% 30%, hsla(${hue},60%,65%,.55), hsla(${hue-8},60%,35%,.3))`;
-      circle.style.borderColor=`hsla(${hue},60%,55%,.55)`;
+    const avatarUrl=user?.avatarUrl||'';
+    if(avatarUrl && avatarUrl.startsWith('data:image/')){
+      applyAvatarImage(circle, avatarUrl);
+      return;
+    }
+    if(avatarUrl){
+      loadAvatarImage(avatarUrl)
+        .then(()=>applyAvatarImage(circle, avatarUrl))
+        .catch(()=>setAvatarFallback(circle, initials));
+      return;
+    }
+    setAvatarFallback(circle, initials);
+  }
+
+  function triggerAvatarUpload(){
+    const input=document.getElementById('avatarUpload');
+    if(!input)return;
+    input.click();
+  }
+
+  function readFileAsDataUrl(file){
+    return new Promise((resolve,reject)=>{
+      const reader=new FileReader();
+      reader.onload=()=>resolve(reader.result);
+      reader.onerror=()=>reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function resizeAvatarDataUrl(dataUrl, maxSize){
+    return new Promise((resolve,reject)=>{
+      const img=new Image();
+      img.onload=()=>{
+        const maxDim=Math.max(img.width,img.height);
+        const scale=maxDim>maxSize?maxSize/maxDim:1;
+        const w=Math.max(1,Math.round(img.width*scale));
+        const h=Math.max(1,Math.round(img.height*scale));
+        const canvas=document.createElement('canvas');
+        canvas.width=w;
+        canvas.height=h;
+        const ctx=canvas.getContext('2d');
+        ctx.drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL('image/jpeg',0.9));
+      };
+      img.onerror=()=>reject(new Error('invalid_image'));
+      img.src=dataUrl;
+    });
+  }
+
+  async function handleAvatarUpload(event){
+    const file=event.target.files?.[0];
+    event.target.value='';
+    if(!file)return;
+    const t=gt(lang);
+    const maxSize=2*1024*1024;
+    if(file.size>maxSize){
+      showToast('!',t.mediaTooLargePhoto||'Photo is too large.');
+      return;
+    }
+    try{
+      const raw=await readFileAsDataUrl(file);
+      const resized=await resizeAvatarDataUrl(raw,320);
+      const data=await api('/api/profile/avatar',{method:'POST',body:JSON.stringify({dataUrl:resized})});
+      if(data?.avatarUrl){
+        user.avatarUrl=data.avatarUrl;
+      }else{
+        user.avatarUrl=resized;
+      }
+      renderAvatar();
+    }catch(_e){
+      showToast('!',t.uploadFail||'Unable to upload photo.');
     }
   }
 
@@ -4306,6 +4375,8 @@ document.addEventListener('DOMContentLoaded',async()=>{
     else{document.getElementById('aibox').style.display='none';predTxt=''}
   });
   const cd=document.getElementById('fcd');if(cd)cd.min=new Date().toISOString().split('T')[0];
+  const avatarInput=document.getElementById('avatarUpload');
+  if(avatarInput)avatarInput.addEventListener('change',handleAvatarUpload);
   await Promise.all([loadSession(),loadPublicCaps(),loadStats()]);
   buildLL();render();
   if(location.pathname==='/admin')go('admin');

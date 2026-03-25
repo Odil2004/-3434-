@@ -369,7 +369,7 @@ function getGravatarUrl(email) {
   const normalized = normalizeEmail(email);
   if (!normalized) return "";
   const hash = crypto.createHash("md5").update(normalized).digest("hex");
-  return `https://www.gravatar.com/avatar/${hash}?d=identicon&s=200`;
+  return `https://www.gravatar.com/avatar/${hash}?d=404&s=200`;
 }
 
 function normalizeEmailLike(email) {
@@ -451,11 +451,12 @@ function isPlaceholderCity(city) {
 function publicUser(user) {
   const premiumUntil = user.premiumUntil || null;
   const isPremium = premiumUntil ? new Date(premiumUntil).getTime() > Date.now() : false;
+  const customAvatar = typeof user.avatarCustom === "string" ? user.avatarCustom : "";
   return {
     id: user.id,
     name: user.name,
     email: user.email,
-    avatarUrl: getGravatarUrl(user.email),
+    avatarUrl: customAvatar || getGravatarUrl(user.email),
     createdAt: user.createdAt,
     plan: isPremium ? "premium" : "free",
     premiumUntil,
@@ -2935,7 +2936,8 @@ app.post("/api/auth/register", async (req, res) => {
     passwordHash: pending.passwordHash,
     createdAt: new Date().toISOString(),
     premiumUntil: null,
-    premiumSource: null
+    premiumSource: null,
+    avatarCustom: ""
   };
 
   store.pendingRegistrations = store.pendingRegistrations.filter((entry) => entry.email !== email);
@@ -3118,6 +3120,24 @@ app.post("/api/auth/reset-password", async (req, res) => {
 
 app.get("/api/auth/me", authRequired, (req, res) => {
   res.json({ user: publicUser(req.user) });
+});
+
+app.post("/api/profile/avatar", authRequired, async (req, res) => {
+  const dataUrl = typeof req.body?.dataUrl === "string" ? req.body.dataUrl : "";
+  if (dataUrl && !dataUrl.startsWith("data:image/")) {
+    return res.status(400).json({ error: "Invalid avatar payload" });
+  }
+  if (dataUrl && dataUrl.length > 600000) {
+    return res.status(400).json({ error: "Avatar too large" });
+  }
+  const store = await readStore();
+  const user = store.users.find((entry) => entry.id === req.user.id);
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+  user.avatarCustom = dataUrl || "";
+  await writeStore(store);
+  res.json({ ok: true, avatarUrl: user.avatarCustom || getGravatarUrl(user.email) });
 });
 
 app.get("/api/admin/stats", authRequired, adminRequired, async (req, res) => {
