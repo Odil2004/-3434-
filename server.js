@@ -51,7 +51,14 @@ const telegramWebhookUrl = String(process.env.TELEGRAM_WEBHOOK_URL || "").trim()
 const telegramWebhookSecret = String(process.env.TELEGRAM_WEBHOOK_SECRET || "").trim();
 const telegramWebAppUrl = String(process.env.TELEGRAM_WEB_APP_URL || "https://dearfutureme1.onrender.com/").trim();
 const telegramPhotoUrl = String(process.env.TELEGRAM_PHOTO_URL || "").trim() || `${appBaseUrl}/telegram-cover.png`;
-const telegramStartCaption = String(process.env.TELEGRAM_START_CAPTION || "DearFutureMe — отправь письмо будущему себе.\nСоздай капсулу времени и получи сообщение в будущем.").trim();
+const telegramStartCaption = String(
+  process.env.TELEGRAM_START_CAPTION ||
+  "✨ DearFutureMe — личная капсула времени прямо в Telegram.\n\n" +
+  "📝 Напиши послание будущему себе — о мечтах, целях или важных мыслях.\n" +
+  "🔒 Запечатай капсулу и выбери дату открытия.\n" +
+  "⏳ Когда время придёт — письмо вернётся и напомнит, каким ты был и к чему шёл.\n\n" +
+  "Нажми кнопку ниже, чтобы открыть веб‑приложение и создать свою капсулу. 🚀"
+).trim();
 const bannerFileName = "DearFutureMe.png";
 const bannerFilePath = path.join(rootDir, bannerFileName);
 const bannerUrl = `${appBaseUrl}/${encodeURIComponent(bannerFileName)}`;
