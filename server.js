@@ -537,71 +537,62 @@ function telegramKeyboard() {
   };
 }
 
-function buildTelegramCaption(customIds) {
-  const ids = Array.isArray(customIds) ? customIds.filter(Boolean) : [];
-  if (!ids.length) {
-    return { text: telegramStartCaption, entities: [] };
-  }
-  const dot = "•";
+function buildTelegramCaptionHtml() {
+  const ids = telegramEmojiIds.filter(Boolean);
+  if (ids.length < 5) return "";
+  const tags = ids.map((id) => `<tg-emoji emoji-id="${id}">•</tg-emoji>`);
   const lines = [
-    `${dot} DearFutureMe  личная капсула времени прямо в Telegram.`,
+    `${tags[0]} DearFutureMe  личная капсула времени прямо в Telegram.`,
     "",
-    `${dot} Напиши послание будущему себе  о мечтах, целях или важных мыслях.`,
-    `${dot} Запечатай капсулу и выбери дату открытия.`,
-    `${dot} Когда время придёт  письмо вернётся и напомнит, каким ты был и к чему шёл.`,
+    `${tags[1]} Напиши послание будущему себе  о мечтах, целях или важных мыслях.`,
+    `${tags[2]} Запечатай капсулу и выбери дату открытия.`,
+    `${tags[3]} Когда время придёт  письмо вернётся и напомнит, каким ты был и к чему шёл.`,
     "",
-    `Нажми кнопку ниже, чтобы открыть веб‑приложение и создать свою капсулу. ${dot}`
+    `Нажми кнопку ниже, чтобы открыть веб‑приложение и создать свою капсулу. ${tags[4]}`
   ];
-  const text = lines.join("\n");
-  const entities = [];
-  let searchIndex = 0;
-  const slots = [ids[0], ids[1], ids[2], ids[3], ids[4]].filter(Boolean);
-  slots.forEach((id) => {
-    const idx = text.indexOf(dot, searchIndex);
-    if (idx >= 0) {
-      entities.push({ type: "custom_emoji", offset: idx, length: 1, custom_emoji_id: id });
-      searchIndex = idx + 1;
-    }
-  });
-  return { text, entities };
+  return lines.join("\n");
 }
 
 async function sendTelegramStart(chatId) {
   if (!telegramToken || !chatId) return;
-  const caption = buildTelegramCaption(telegramEmojiIds);
+  const htmlCaption = buildTelegramCaptionHtml();
   if (telegramPhotoUrl) {
-    if (caption.entities && caption.entities.length) {
+    if (htmlCaption) {
       const photoRes = await telegramApi("sendPhoto", {
         chat_id: chatId,
         photo: telegramPhotoUrl,
-        caption: caption.text,
-        caption_entities: caption.entities,
+        caption: htmlCaption,
+        parse_mode: "HTML",
         reply_markup: telegramKeyboard()
       });
       if (photoRes && photoRes.ok) return;
     }
     const photoResPlain = await telegramApi("sendPhoto", {
       chat_id: chatId,
-      photo: telegramPhotoUrl,
-      caption: telegramStartCaption,
-      reply_markup: telegramKeyboard()
+      photo: telegramPhotoUrl
     });
-    if (photoResPlain && photoResPlain.ok) return;
+    if (photoResPlain && photoResPlain.ok) {
+      const msgRes = await telegramApi("sendMessage", {
+        chat_id: chatId,
+        text: htmlCaption || telegramStartCaption,
+        parse_mode: htmlCaption ? "HTML" : undefined,
+        reply_markup: telegramKeyboard()
+      });
+      if (msgRes && msgRes.ok) return;
+    }
   }
   const messageRes = await telegramApi("sendMessage", {
     chat_id: chatId,
-    text: caption.text,
-    entities: caption.entities,
+    text: htmlCaption || telegramStartCaption,
+    parse_mode: htmlCaption ? "HTML" : undefined,
     reply_markup: telegramKeyboard()
   });
   if (messageRes && messageRes.ok) return;
-  if (caption.entities && caption.entities.length) {
-    await telegramApi("sendMessage", {
-      chat_id: chatId,
-      text: telegramStartCaption,
-      reply_markup: telegramKeyboard()
-    });
-  }
+  await telegramApi("sendMessage", {
+    chat_id: chatId,
+    text: telegramStartCaption,
+    reply_markup: telegramKeyboard()
+  });
 }
 
 async function sendTelegramEmojiTest(chatId) {
@@ -626,18 +617,13 @@ async function sendTelegramEmojiTest(chatId) {
     text: lines.join("\n")
   });
   if (returned.length) {
-    const dot = "•";
-    const text = returned.map((id) => `${dot} ${id}`).join("\n");
-    const entities = [];
-    let offset = 0;
-    returned.forEach((id) => {
-      entities.push({ type: "custom_emoji", offset, length: 1, custom_emoji_id: id });
-      offset += 2 + id.length + 1;
-    });
+    const sample = returned
+      .map((id) => `<tg-emoji emoji-id="${id}">•</tg-emoji> ${id}`)
+      .join("\n");
     await telegramApi("sendMessage", {
       chat_id: chatId,
-      text,
-      entities
+      text: sample,
+      parse_mode: "HTML"
     });
   }
 }
