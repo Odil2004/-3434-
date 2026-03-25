@@ -569,33 +569,37 @@ function buildTelegramCaption(customIds) {
 async function sendTelegramStart(chatId) {
   if (!telegramToken || !chatId) return;
   const caption = buildTelegramCaption(telegramEmojiIds);
-  const messagePayload = {
+  if (telegramPhotoUrl) {
+    if (caption.entities && caption.entities.length) {
+      const photoRes = await telegramApi("sendPhoto", {
+        chat_id: chatId,
+        photo: telegramPhotoUrl
+      });
+      if (photoRes && photoRes.ok) {
+        const emojiMsg = await telegramApi("sendMessage", {
+          chat_id: chatId,
+          text: caption.text,
+          entities: caption.entities,
+          reply_markup: telegramKeyboard()
+        });
+        if (emojiMsg && emojiMsg.ok) return;
+      }
+    }
+    const photoPayload = {
+      chat_id: chatId,
+      photo: telegramPhotoUrl,
+      caption: telegramStartCaption,
+      reply_markup: telegramKeyboard()
+    };
+    const photoResPlain = await telegramApi("sendPhoto", photoPayload);
+    if (photoResPlain && photoResPlain.ok) return;
+  }
+  const messageRes = await telegramApi("sendMessage", {
     chat_id: chatId,
     text: caption.text,
     entities: caption.entities,
     reply_markup: telegramKeyboard()
-  };
-  if (telegramPhotoUrl) {
-    const photoPayload = {
-      chat_id: chatId,
-      photo: telegramPhotoUrl,
-      caption: caption.text,
-      caption_entities: caption.entities,
-      reply_markup: telegramKeyboard()
-    };
-    const photoRes = await telegramApi("sendPhoto", photoPayload);
-    if (photoRes && photoRes.ok) return;
-    if (caption.entities && caption.entities.length) {
-      const plainPhotoRes = await telegramApi("sendPhoto", {
-        chat_id: chatId,
-        photo: telegramPhotoUrl,
-        caption: telegramStartCaption,
-        reply_markup: telegramKeyboard()
-      });
-      if (plainPhotoRes && plainPhotoRes.ok) return;
-    }
-  }
-  const messageRes = await telegramApi("sendMessage", messagePayload);
+  });
   if (messageRes && messageRes.ok) return;
   if (caption.entities && caption.entities.length) {
     await telegramApi("sendMessage", {
