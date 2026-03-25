@@ -3407,6 +3407,28 @@ app.post("/api/admin/reviews/delete", authRequired, adminRequired, async (req, r
   }
 });
 
+app.post("/api/admin/capsules/delete", authRequired, adminRequired, async (req, res) => {
+  try {
+    const id = String(req.body && req.body.id ? req.body.id : "").trim();
+    if (!id) {
+      return res.status(400).json({ error: "Capsule id required" });
+    }
+    const store = await readStore();
+    const capsules = Array.isArray(store.capsules) ? store.capsules : [];
+    const idx = capsules.findIndex((c) => String(c && c.id ? c.id : "") === id);
+    if (idx === -1) {
+      return res.status(404).json({ error: "Capsule not found" });
+    }
+    const removed = capsules.splice(idx, 1)[0];
+    store.capsules = capsules;
+    await writeStore(store);
+    return res.json({ ok: true, id: removed && removed.id ? removed.id : id });
+  } catch (e) {
+    console.error("capsule delete error:", e);
+    return res.status(500).json({ error: "Unable to delete capsule" });
+  }
+});
+
 app.post("/api/admin/users/update", authRequired, adminRequired, async (req, res) => {
   try {
     const store = await readStore();

@@ -1367,17 +1367,29 @@ function renderCapsules(list){
     var openTime=c.openDate?new Date(c.openDate).getTime():0;
     var statusLabel=delivered?'Доставлена':(openTime && openTime>now?'Ожидает':'Ожидает');
     var statusBadge=delivered?'gr':'am';
-    return '<tr>'+
-      '<td class="tdm">#'+String(c.id||'').slice(0,6)+'</td>'+
-      '<td><div class="tdu"><div class="tda" style="background:var(--gb);color:var(--gold)">'+(String(c.name||'U').slice(0,2).toUpperCase())+'</div><div class="tdn">'+fixText(c.name||'Пользователь')+'</div></div></td>'+
-      '<td><span class="badge '+type.badge+'">'+type.label+'</span></td>'+
-      '<td class="tdm">'+fmtDate(c.createdAt)+'</td>'+
-      '<td class="tdm">'+(c.openDate?fmtDate(c.openDate):'—')+'</td>'+
-      '<td><span class="badge '+statusBadge+'">'+statusLabel+'</span></td>'+
-    '</tr>';
-  }).join('');
-  body.innerHTML=rows || '<tr><td colspan="6" class="tdm" style="text-align:center">Нет данных</td></tr>';
-}
+      return '<tr>'+
+        '<td class="tdm">#'+String(c.id||'').slice(0,6)+'</td>'+
+        '<td><div class="tdu"><div class="tda" style="background:var(--gb);color:var(--gold)">'+(String(c.name||'U').slice(0,2).toUpperCase())+'</div><div class="tdn">'+fixText(c.name||'Пользователь')+'</div></div></td>'+
+        '<td><span class="badge '+type.badge+'">'+type.label+'</span></td>'+
+        '<td class="tdm">'+fmtDate(c.createdAt)+'</td>'+
+        '<td class="tdm">'+(c.openDate?fmtDate(c.openDate):'—')+'</td>'+
+        '<td><span class="badge '+statusBadge+'">'+statusLabel+'</span></td>'+
+        '<td><div class="btn" style="color:var(--red);border-color:var(--rb)" data-id="'+(c.id||'')+'" onclick="deleteCapsuleAdmin(this.dataset.id)">Удалить</div></td>'+
+      '</tr>';
+    }).join('');
+    body.innerHTML=rows || '<tr><td colspan="7" class="tdm" style="text-align:center">Нет данных</td></tr>';
+  }
+
+  async function deleteCapsuleAdmin(id){
+    if(!id)return;
+    if(!confirm('Удалить капсулу '+String(id).slice(0,6)+'?'))return;
+    try{
+      await apiAdmin('/api/admin/capsules/delete',{method:'POST',body:JSON.stringify({id:id})});
+      await loadDashboard();
+    }catch(e){
+      alert('Ошибка: '+(e.message||'не удалось удалить'));
+    }
+  }
 
 async function deletePromoAdmin(code){
   var c=String(code||'').trim();
