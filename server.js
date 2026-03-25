@@ -537,54 +537,56 @@ function telegramKeyboard() {
   };
 }
 
-function buildTelegramCaptionHtml() {
+function buildTelegramCaptionEntities() {
   const ids = telegramEmojiIds.filter(Boolean);
-  if (ids.length < 5) return "";
-  const tags = ids.map((id) => `<tg-emoji emoji-id="${id}">•</tg-emoji>`);
-  const lines = [
-    `${tags[0]} DearFutureMe  личная капсула времени прямо в Telegram.`,
-    "",
-    `${tags[1]} Напиши послание будущему себе  о мечтах, целях или важных мыслях.`,
-    `${tags[2]} Запечатай капсулу и выбери дату открытия.`,
-    `${tags[3]} Когда время придёт  письмо вернётся и напомнит, каким ты был и к чему шёл.`,
-    "",
-    `Нажми кнопку ниже, чтобы открыть веб‑приложение и создать свою капсулу. ${tags[4]}`
-  ];
-  return lines.join("\n");
+  if (ids.length < 5) {
+    return { text: telegramStartCaption, entities: [] };
+  }
+  const entities = [];
+  let text = "";
+  const addLine = (id, line) => {
+    const offset = text.length;
+    text += `• ${line}\n`;
+    entities.push({ type: "custom_emoji", offset, length: 1, custom_emoji_id: id });
+  };
+  addLine(ids[0], "DearFutureMe  личная капсула времени прямо в Telegram.");
+  text += "\n";
+  addLine(ids[1], "Напиши послание будущему себе  о мечтах, целях или важных мыслях.");
+  addLine(ids[2], "Запечатай капсулу и выбери дату открытия.");
+  addLine(ids[3], "Когда время придёт  письмо вернётся и напомнит, каким ты был и к чему шёл.");
+  text += "\nНажми кнопку ниже, чтобы открыть веб‑приложение и создать свою капсулу. ";
+  const tailOffset = text.length;
+  text += "•";
+  entities.push({ type: "custom_emoji", offset: tailOffset, length: 1, custom_emoji_id: ids[4] });
+  return { text, entities };
 }
 
 async function sendTelegramStart(chatId) {
   if (!telegramToken || !chatId) return;
-  const htmlCaption = buildTelegramCaptionHtml();
+  const caption = buildTelegramCaptionEntities();
   if (telegramPhotoUrl) {
-    if (htmlCaption) {
+    if (caption.entities && caption.entities.length) {
       const photoRes = await telegramApi("sendPhoto", {
         chat_id: chatId,
         photo: telegramPhotoUrl,
-        caption: htmlCaption,
-        parse_mode: "HTML",
+        caption: caption.text,
+        caption_entities: caption.entities,
         reply_markup: telegramKeyboard()
       });
       if (photoRes && photoRes.ok) return;
     }
     const photoResPlain = await telegramApi("sendPhoto", {
       chat_id: chatId,
-      photo: telegramPhotoUrl
+      photo: telegramPhotoUrl,
+      caption: telegramStartCaption,
+      reply_markup: telegramKeyboard()
     });
-    if (photoResPlain && photoResPlain.ok) {
-      const msgRes = await telegramApi("sendMessage", {
-        chat_id: chatId,
-        text: htmlCaption || telegramStartCaption,
-        parse_mode: htmlCaption ? "HTML" : undefined,
-        reply_markup: telegramKeyboard()
-      });
-      if (msgRes && msgRes.ok) return;
-    }
+    if (photoResPlain && photoResPlain.ok) return;
   }
   const messageRes = await telegramApi("sendMessage", {
     chat_id: chatId,
-    text: htmlCaption || telegramStartCaption,
-    parse_mode: htmlCaption ? "HTML" : undefined,
+    text: caption.text,
+    entities: caption.entities,
     reply_markup: telegramKeyboard()
   });
   if (messageRes && messageRes.ok) return;
@@ -617,13 +619,18 @@ async function sendTelegramEmojiTest(chatId) {
     text: lines.join("\n")
   });
   if (returned.length) {
-    const sample = returned
-      .map((id) => `<tg-emoji emoji-id="${id}">•</tg-emoji> ${id}`)
-      .join("\n");
+    const entities = [];
+    let sample = "";
+    returned.forEach((id, idx) => {
+      const offset = sample.length;
+      sample += `• ${id}`;
+      entities.push({ type: "custom_emoji", offset, length: 1, custom_emoji_id: id });
+      if (idx < returned.length - 1) sample += "\n";
+    });
     await telegramApi("sendMessage", {
       chat_id: chatId,
       text: sample,
-      parse_mode: "HTML"
+      entities
     });
   }
 }
