@@ -50,7 +50,6 @@ const telegramToken = String(process.env.TELEGRAM_BOT_TOKEN || "").trim();
 const telegramWebhookUrl = String(process.env.TELEGRAM_WEBHOOK_URL || "").trim();
 const telegramWebhookSecret = String(process.env.TELEGRAM_WEBHOOK_SECRET || "").trim();
 const telegramWebAppUrl = String(process.env.TELEGRAM_WEB_APP_URL || "https://dearfutureme1.onrender.com/").trim();
-const telegramPhotoUrl = String(process.env.TELEGRAM_PHOTO_URL || "").trim() || `${appBaseUrl}/telegram-cover.png`;
 const telegramStartCaption = String(
   process.env.TELEGRAM_START_CAPTION ||
   "DearFutureMe  личная капсула времени прямо в Telegram.\n\n" +
@@ -69,6 +68,7 @@ const telegramEmojiIds = [
 const bannerFileName = "DearFutureMe.png";
 const bannerFilePath = path.join(rootDir, bannerFileName);
 const bannerUrl = `${appBaseUrl}/${encodeURIComponent(bannerFileName)}`;
+const telegramPhotoUrl = String(process.env.TELEGRAM_PHOTO_URL || "").trim() || bannerUrl;
 const bannerCid = "dfm-banner";
 const NUM_EXPR_RE = new RegExp("([0-9][0-9+\\-*/().\\s]*)");
 const NUM_EXPR_SAFE_RE = new RegExp("^[0-9+\\-*/().]+$");
@@ -535,12 +535,39 @@ function telegramKeyboard() {
   };
 }
 
-function buildTelegramCaption() {
-  const useCustom = telegramEmojiIds.every((id) => id && id.trim());
-  if (!useCustom) {
+let telegramEmojiCache = null;
+let telegramEmojiCacheAt = 0;
+
+async function getTelegramEmojiIds() {
+  const now = Date.now();
+  if (telegramEmojiCache && now - telegramEmojiCacheAt < 6 * 60 * 60 * 1000) {
+    return telegramEmojiCache;
+  }
+  if (!telegramEmojiIds.length || !telegramToken) {
+    telegramEmojiCache = [];
+    telegramEmojiCacheAt = now;
+    return telegramEmojiCache;
+  }
+  try {
+    const res = await telegramApi("getCustomEmojiStickers", { custom_emoji_ids: telegramEmojiIds });
+    if (res && res.ok && Array.isArray(res.result)) {
+      const returned = new Set(res.result.map((item) => item.custom_emoji_id).filter(Boolean));
+      telegramEmojiCache = telegramEmojiIds.filter((id) => returned.has(id));
+    } else {
+      telegramEmojiCache = [];
+    }
+  } catch (_e) {
+    telegramEmojiCache = [];
+  }
+  telegramEmojiCacheAt = now;
+  return telegramEmojiCache;
+}
+
+function buildTelegramCaption(customIds) {
+  const ids = Array.isArray(customIds) ? customIds.filter(Boolean) : [];
+  if (!ids.length) {
     return { text: telegramStartCaption, entities: [] };
   }
-  const e = telegramEmojiIds;
   const dot = "•";
   const lines = [
     `${dot} DearFutureMe  личная капсула времени прямо в Telegram.`,
@@ -554,8 +581,8 @@ function buildTelegramCaption() {
   const text = lines.join("\n");
   const entities = [];
   let searchIndex = 0;
-  const ids = [e[0], e[1], e[2], e[3], e[4]];
-  ids.forEach((id) => {
+  const slots = [ids[0], ids[1], ids[2], ids[3], ids[4]].filter(Boolean);
+  slots.forEach((id) => {
     const idx = text.indexOf(dot, searchIndex);
     if (idx >= 0) {
       entities.push({ type: "custom_emoji", offset: idx, length: 1, custom_emoji_id: id });
@@ -567,7 +594,8 @@ function buildTelegramCaption() {
 
 async function sendTelegramStart(chatId) {
   if (!telegramToken || !chatId) return;
-  const caption = buildTelegramCaption();
+  const emojiIds = await getTelegramEmojiIds();
+  const caption = buildTelegramCaption(emojiIds);
   const messagePayload = {
     chat_id: chatId,
     text: caption.text,
@@ -584,6 +612,15 @@ async function sendTelegramStart(chatId) {
     };
     const photoRes = await telegramApi("sendPhoto", photoPayload);
     if (photoRes && photoRes.ok) return;
+    if (caption.entities && caption.entities.length) {
+      const plainPhotoRes = await telegramApi("sendPhoto", {
+        chat_id: chatId,
+        photo: telegramPhotoUrl,
+        caption: telegramStartCaption,
+        reply_markup: telegramKeyboard()
+      });
+      if (plainPhotoRes && plainPhotoRes.ok) return;
+    }
   }
   const messageRes = await telegramApi("sendMessage", messagePayload);
   if (messageRes && messageRes.ok) return;
