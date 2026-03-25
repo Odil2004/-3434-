@@ -195,7 +195,9 @@ app.post("/telegram/webhook", async (req, res) => {
   const message = update.message || update.edited_message;
   if (message && message.chat && message.chat.id) {
     const text = String(message.text || "");
-    if (text.startsWith("/start") || message.new_chat_members) {
+    if (text.startsWith("/emoji")) {
+      await sendTelegramEmojiTest(message.chat.id);
+    } else if (text.startsWith("/start") || message.new_chat_members) {
       await sendTelegramStart(message.chat.id);
     }
   }
@@ -600,6 +602,44 @@ async function sendTelegramStart(chatId) {
       chat_id: chatId,
       text: telegramStartCaption,
       reply_markup: telegramKeyboard()
+    });
+  }
+}
+
+async function sendTelegramEmojiTest(chatId) {
+  if (!telegramToken || !chatId) return;
+  const res = await telegramApi("getCustomEmojiStickers", { custom_emoji_ids: telegramEmojiIds });
+  if (!res || !res.ok) {
+    await telegramApi("sendMessage", {
+      chat_id: chatId,
+      text: "Не удалось проверить emoji ID. Проверь логи сервера."
+    });
+    return;
+  }
+  const returned = Array.isArray(res.result) ? res.result.map((item) => item.custom_emoji_id).filter(Boolean) : [];
+  const missing = telegramEmojiIds.filter((id) => !returned.includes(id));
+  const lines = [
+    "✅ Проверка custom emoji:",
+    returned.length ? `Работают: ${returned.join(", ")}` : "Работают: нет",
+    missing.length ? `Не найдены: ${missing.join(", ")}` : "Не найдены: нет"
+  ];
+  await telegramApi("sendMessage", {
+    chat_id: chatId,
+    text: lines.join("\n")
+  });
+  if (returned.length) {
+    const dot = "•";
+    const text = returned.map((id) => `${dot} ${id}`).join("\n");
+    const entities = [];
+    let offset = 0;
+    returned.forEach((id) => {
+      entities.push({ type: "custom_emoji", offset, length: 1, custom_emoji_id: id });
+      offset += 2 + id.length + 1;
+    });
+    await telegramApi("sendMessage", {
+      chat_id: chatId,
+      text,
+      entities
     });
   }
 }
