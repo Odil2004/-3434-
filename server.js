@@ -65,6 +65,7 @@ const telegramEmojiIds = [
   "5298768060075750824",
   "5372917041193828849"
 ];
+const telegramEmojiFallbacks = ["✨", "📝", "🔒", "⏳", "🚀"];
 const bannerFileName = "DearFutureMe.png";
 const bannerFilePath = path.join(rootDir, bannerFileName);
 const bannerUrl = `${appBaseUrl}/${encodeURIComponent(bannerFileName)}`;
@@ -544,20 +545,21 @@ function buildTelegramCaptionEntities() {
   }
   const entities = [];
   let text = "";
-  const addLine = (id, line) => {
+  const addLine = (id, fallback, line) => {
     const offset = text.length;
-    text += `• ${line}\n`;
-    entities.push({ type: "custom_emoji", offset, length: 1, custom_emoji_id: id });
+    text += `${fallback} ${line}\n`;
+    entities.push({ type: "custom_emoji", offset, length: fallback.length, custom_emoji_id: id });
   };
-  addLine(ids[0], "DearFutureMe  личная капсула времени прямо в Telegram.");
+  addLine(ids[0], telegramEmojiFallbacks[0], "DearFutureMe  личная капсула времени прямо в Telegram.");
   text += "\n";
-  addLine(ids[1], "Напиши послание будущему себе  о мечтах, целях или важных мыслях.");
-  addLine(ids[2], "Запечатай капсулу и выбери дату открытия.");
-  addLine(ids[3], "Когда время придёт  письмо вернётся и напомнит, каким ты был и к чему шёл.");
+  addLine(ids[1], telegramEmojiFallbacks[1], "Напиши послание будущему себе  о мечтах, целях или важных мыслях.");
+  addLine(ids[2], telegramEmojiFallbacks[2], "Запечатай капсулу и выбери дату открытия.");
+  addLine(ids[3], telegramEmojiFallbacks[3], "Когда время придёт  письмо вернётся и напомнит, каким ты был и к чему шёл.");
   text += "\nНажми кнопку ниже, чтобы открыть веб‑приложение и создать свою капсулу. ";
   const tailOffset = text.length;
-  text += "•";
-  entities.push({ type: "custom_emoji", offset: tailOffset, length: 1, custom_emoji_id: ids[4] });
+  const tailFallback = telegramEmojiFallbacks[4];
+  text += tailFallback;
+  entities.push({ type: "custom_emoji", offset: tailOffset, length: tailFallback.length, custom_emoji_id: ids[4] });
   return { text, entities };
 }
 
@@ -610,8 +612,9 @@ async function sendTelegramEmojiTest(chatId) {
     let sample = "";
     returned.forEach((id, idx) => {
       const offset = sample.length;
-      sample += `• ${id}`;
-      entities.push({ type: "custom_emoji", offset, length: 1, custom_emoji_id: id });
+      const fallback = telegramEmojiFallbacks[idx % telegramEmojiFallbacks.length] || "✨";
+      sample += `${fallback} ${id}`;
+      entities.push({ type: "custom_emoji", offset, length: fallback.length, custom_emoji_id: id });
       if (idx < returned.length - 1) sample += "\n";
     });
     await telegramApi("sendMessage", {
