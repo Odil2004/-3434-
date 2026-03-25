@@ -3815,24 +3815,34 @@ function hashString(value){
   return h;
 }
 
-function renderAvatar(){
-  const t=gt(lang);
-  const circle=document.getElementById('avatarCircle');
-  const title=document.getElementById('avatarTitle');
-  const note=document.getElementById('avatarNote');
-  const btn=document.getElementById('avatarBtn');
-  if(!circle||!title||!note||!btn)return;
-  title.textContent=t.avatarTitle||'Future Self Avatar';
-  note.textContent=hasPremium()?(t.avatarNote||'Generate a future-self avatar based on your name.'):(t.avatarLocked||'Premium only: unlock the avatar.');
-  btn.textContent=t.avatarBtn||'Generate avatar';
-  btn.disabled=!hasPremium();
-  const initials=(user?.name||'Me').trim().split(/\s+/).slice(0,2).map(s=>s[0]?.toUpperCase()||'').join('')||'ME';
-  const seed=avatarSeed||hashString(user?.name||'future');
-  const hue=32+(seed%50);
-  circle.textContent=initials;
-  circle.style.background=`radial-gradient(circle at 30% 30%, hsla(${hue},60%,65%,.55), hsla(${hue-8},60%,35%,.3))`;
-  circle.style.borderColor=`hsla(${hue},60%,55%,.55)`;
-}
+  function renderAvatar(){
+    const t=gt(lang);
+    const circle=document.getElementById('avatarCircle');
+    const title=document.getElementById('avatarTitle');
+    const note=document.getElementById('avatarNote');
+    const btn=document.getElementById('avatarBtn');
+    if(!circle||!title||!note||!btn)return;
+    title.textContent=t.avatarTitle||'Future Self Avatar';
+    note.textContent=hasPremium()?(t.avatarNote||'Generate a future-self avatar based on your name.'):(t.avatarLocked||'Premium only: unlock the avatar.');
+    btn.textContent=t.avatarBtn||'Generate avatar';
+    btn.disabled=!hasPremium();
+    const initials=(user?.name||'Me').trim().split(/\s+/).slice(0,2).map(s=>s[0]?.toUpperCase()||'').join('')||'ME';
+    if(user?.avatarUrl){
+      circle.textContent='';
+      circle.style.backgroundImage=`url(${user.avatarUrl})`;
+      circle.style.backgroundSize='cover';
+      circle.style.backgroundPosition='center';
+      circle.style.backgroundRepeat='no-repeat';
+      circle.style.borderColor='rgba(196,147,63,.45)';
+    }else{
+      const seed=avatarSeed||hashString(user?.name||'future');
+      const hue=32+(seed%50);
+      circle.textContent=initials;
+      circle.style.backgroundImage='none';
+      circle.style.background=`radial-gradient(circle at 30% 30%, hsla(${hue},60%,65%,.55), hsla(${hue-8},60%,35%,.3))`;
+      circle.style.borderColor=`hsla(${hue},60%,55%,.55)`;
+    }
+  }
 
 function generateAvatar(){
   const t=gt(lang);

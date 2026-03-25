@@ -365,6 +365,13 @@ function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
 }
 
+function getGravatarUrl(email) {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return "";
+  const hash = crypto.createHash("md5").update(normalized).digest("hex");
+  return `https://www.gravatar.com/avatar/${hash}?d=identicon&s=200`;
+}
+
 function normalizeEmailLike(email) {
   const map = {
     "А": "A",
@@ -448,6 +455,7 @@ function publicUser(user) {
     id: user.id,
     name: user.name,
     email: user.email,
+    avatarUrl: getGravatarUrl(user.email),
     createdAt: user.createdAt,
     plan: isPremium ? "premium" : "free",
     premiumUntil,
