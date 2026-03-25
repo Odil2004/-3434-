@@ -515,6 +515,10 @@ async function telegramApi(method, payload) {
     body: JSON.stringify(payload || {})
   });
   const data = await response.json().catch(() => ({}));
+  if (!data?.ok) {
+    const desc = data?.description || "unknown error";
+    console.error(`Telegram API ${method} failed:`, desc);
+  }
   return data;
 }
 
@@ -581,7 +585,15 @@ async function sendTelegramStart(chatId) {
     const photoRes = await telegramApi("sendPhoto", photoPayload);
     if (photoRes && photoRes.ok) return;
   }
-  await telegramApi("sendMessage", messagePayload);
+  const messageRes = await telegramApi("sendMessage", messagePayload);
+  if (messageRes && messageRes.ok) return;
+  if (caption.entities && caption.entities.length) {
+    await telegramApi("sendMessage", {
+      chat_id: chatId,
+      text: telegramStartCaption,
+      reply_markup: telegramKeyboard()
+    });
+  }
 }
 
 async function ensureTelegramWebhook() {
