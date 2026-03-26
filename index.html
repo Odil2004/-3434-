@@ -4392,12 +4392,17 @@ function initStarBackground(){
   const canvas=document.getElementById('bg');
   if(!canvas)return;
   const ctx=canvas.getContext('2d');
-  let W=0,H=0,stars=[],ready=false;
+  let W=0,H=0,stars=[],ready=false,dpr=1;
   let shooters=[];
   const resize=()=>{
     W=window.innerWidth||document.documentElement.clientWidth||800;
     H=window.innerHeight||document.documentElement.clientHeight||600;
-    canvas.width=W;canvas.height=H;
+    dpr=Math.max(1,window.devicePixelRatio||1);
+    canvas.width=Math.floor(W*dpr);
+    canvas.height=Math.floor(H*dpr);
+    canvas.style.width=W+'px';
+    canvas.style.height=H+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
     stars=Array.from({length:380},()=>({
       x:Math.random()*W,
       y:Math.random()*H,
