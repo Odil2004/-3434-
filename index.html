@@ -17,10 +17,9 @@ body{background:var(--ink);color:var(--parchment);font-family:'Instrument Sans',
 body::before,body::after{content:'';position:fixed;pointer-events:none;opacity:0;transition:opacity .45s ease;z-index:-1}
 body::before{top:-12vh;right:-10vw;width:42vw;height:42vw;min-width:260px;min-height:260px;border-radius:50%;background:radial-gradient(circle,rgba(232,201,122,.15) 0%,rgba(196,147,63,.08) 34%,transparent 72%);filter:blur(24px);transform:translate3d(0,0,0)}
 body::after{bottom:-16vh;left:-8vw;width:34vw;height:34vw;min-width:220px;min-height:220px;border-radius:50%;background:radial-gradient(circle,rgba(104,66,24,.26) 0%,rgba(196,147,63,.06) 46%,transparent 76%);filter:blur(22px);transform:translate3d(0,0,0)}
-body.star-bg{background:transparent}
+body.star-bg{background:#020510}
 body.star-bg::before,body.star-bg::after{display:none}
-#bg{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
-body.star-bg > *:not(#bg){position:relative;z-index:1}
+#bg{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:-1}
 body.star-bg #premium-bg{display:none!important}
 body.premium-active{background:radial-gradient(circle at 18% 18%,rgba(232,201,122,.08),transparent 28%),radial-gradient(circle at 82% 12%,rgba(196,147,63,.12),transparent 32%),linear-gradient(180deg,#160f08 0%,#120d08 40%,#0d0a06 100%)}
 body.premium-active::before,body.premium-active::after{opacity:1;animation:premiumFloat 18s ease-in-out infinite}
