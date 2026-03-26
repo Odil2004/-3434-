@@ -135,9 +135,12 @@ body.premium-active .lt{border-color:rgba(232,201,122,.18);background:rgba(232,2
 .bg:hover{background:var(--gold-l)}
 .bo{font-family:'DM Mono',monospace;font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;background:transparent;color:var(--parchment);border:1px solid rgba(245,240,232,.18);padding:15px 36px;cursor:pointer;transition:all .25s}
 .bo:hover{border-color:var(--gold);color:var(--gold-l)}
-.hstats{display:flex;gap:56px;justify-content:center;flex-wrap:wrap}
-.sn{font-family:'Cormorant Garamond',serif;font-size:2.4rem;font-weight:300;color:var(--gold-l);display:block;line-height:1}
-.sl{font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;color:var(--parchment);opacity:.35;margin-top:4px}
+.stats-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;width:min(420px,100%);margin:0 auto}
+.stat-card{background:rgba(212,160,60,.08);border:1px solid rgba(212,160,60,.25);border-radius:12px;padding:14px 8px;text-align:center;position:relative;overflow:hidden;transition:transform .2s ease,border-color .2s ease;cursor:default}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(212,160,60,.6),transparent)}
+.stat-card:hover{transform:translateY(-2px);border-color:rgba(212,160,60,.45)}
+.stat-number{font-size:28px;font-weight:700;color:#d4a03c;line-height:1;margin-bottom:6px;letter-spacing:-.5px}
+.stat-label{font-size:9px;color:rgba(255,255,255,.4);letter-spacing:.1em;text-transform:uppercase;line-height:1.3}
 
 /* SECTION */
 .sec{padding:80px 40px;max-width:1100px;margin:0 auto}
@@ -963,7 +966,10 @@ body.premium-active .site-footer{background:linear-gradient(180deg,rgba(21,15,9,
   .lt{padding:7px 10px}
   .mob-menu{top:58px}
   .hero{padding:100px 22px 60px}
-  .hstats{gap:30px}
+  .stats-row{max-width:360px;gap:8px}
+  .stat-card{padding:12px 6px;border-radius:10px}
+  .stat-number{font-size:24px}
+  .stat-label{font-size:8px}
   .sec,.fw,.cw,.pw,.aw,.prw{padding:40px 18px}
   .fb,.abx{padding:26px 20px}
   .frow{grid-template-columns:1fr}
@@ -1002,7 +1008,9 @@ body.premium-active .site-footer{background:linear-gradient(180deg,rgba(21,15,9,
   .burger{width:34px;height:34px}
   .ht{font-size:2.8rem}
   .hbtns{flex-direction:column;align-items:center;gap:10px}
-  .hstats{flex-direction:column;gap:12px}
+  .stats-row{max-width:320px;gap:6px}
+  .stat-number{font-size:20px}
+  .stat-label{font-size:7px}
   .hsub{margin-bottom:28px}
   .vtgl{flex-direction:column}
   .voice-row{flex-direction:column;align-items:stretch}
@@ -1185,10 +1193,19 @@ body.premium-active .site-footer{background:linear-gradient(180deg,rgba(21,15,9,
       <button class="bg" onclick="go('write')" id="hc1"></button>
       <button class="bo" onclick="go('map')" id="hc2"></button>
     </div>
-    <div class="hstats">
-      <div><span class="sn" id="stat-sealed">0</span><span class="sl" id="hs1"></span></div>
-      <div><span class="sn" id="stat-countries">0</span><span class="sl" id="hs2"></span></div>
-      <div><span class="sn" id="stat-delivered">0</span><span class="sl" id="hs3"></span></div>
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-number" id="stat-sealed">0</div>
+        <div class="stat-label" id="hs1"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="stat-countries">0</div>
+        <div class="stat-label" id="hs2"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="stat-delivered">0</div>
+        <div class="stat-label" id="hs3"></div>
+      </div>
     </div>
   </div>
   <div class="storm" id="storm" style="display:none">
