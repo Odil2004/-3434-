@@ -897,6 +897,41 @@ body.premium-active #p-premium .plf li{
 .live-react-btn:hover{background:rgba(56,189,248,.1);border-color:rgba(56,189,248,.55)}
 .live-react-btn svg{width:14px;height:14px;flex-shrink:0}
 .live-react-btn.on{border-color:rgba(56,189,248,.8);background:rgba(56,189,248,.12)}
+.live-meta{padding:16px 18px;background:rgba(10,8,6,.78);border-top:1px solid rgba(196,147,63,.12)}
+body.star-bg .live-meta{background:rgba(8,7,6,.88)}
+.live-title-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.live-title{font-family:'Cormorant Garamond',serif;font-size:1.2rem;color:var(--parchment);letter-spacing:.02em}
+.live-views{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;color:var(--parchment);opacity:.5}
+.live-channel-row{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:14px;flex-wrap:wrap}
+.live-channel-left{display:flex;align-items:center;gap:12px}
+.live-chan-avatar{width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#f6d38a,#b07b24 55%,#4b2c08 100%);border:1px solid rgba(232,201,122,.45);box-shadow:0 8px 18px rgba(0,0,0,.45)}
+.live-chan-name{font-family:'DM Mono',monospace;font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-l);display:flex;align-items:center;gap:6px}
+.live-verified{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:rgba(232,201,122,.2);color:var(--gold-l);font-size:.6rem}
+.live-chan-tag{font-size:.76rem;color:var(--parchment);opacity:.55;margin-top:2px}
+.live-chan-sub{font-size:.7rem;color:var(--parchment);opacity:.45;margin-top:4px}
+.live-channel-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.live-avatars{display:flex;align-items:center}
+.live-avatar{width:26px;height:26px;border-radius:50%;border:2px solid rgba(10,8,6,.9);margin-left:-8px;box-shadow:0 6px 12px rgba(0,0,0,.35)}
+.live-avatar:first-child{margin-left:0}
+.live-avatar.av1{background:linear-gradient(135deg,#f2c777,#b66f1b)}
+.live-avatar.av2{background:linear-gradient(135deg,#7bc2ff,#3155b8)}
+.live-avatar.av3{background:linear-gradient(135deg,#ff9ac9,#8e2b65)}
+.live-avatar.av4{background:linear-gradient(135deg,#8bffb0,#2a7b4d)}
+.live-avatar-more{display:flex;align-items:center;justify-content:center;background:rgba(245,240,232,.12);color:var(--parchment);font-size:.6rem;font-family:'DM Mono',monospace}
+.live-sub-btn{background:var(--gold);color:var(--ink);border:none;padding:9px 16px;border-radius:999px;font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:all .2s}
+.live-sub-btn:hover{background:var(--gold-l)}
+.live-sub-btn.on{background:rgba(245,240,232,.12);color:var(--parchment);border:1px solid rgba(245,240,232,.2)}
+.live-actions{display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap}
+.yt-like-group{display:inline-flex;align-items:center;border:1px solid rgba(245,240,232,.14);border-radius:999px;overflow:hidden;background:rgba(245,240,232,.06)}
+.yt-like-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;background:transparent;border:none;color:var(--parchment);font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:all .2s}
+.yt-like-btn svg{width:16px;height:16px}
+.yt-like-btn + .yt-like-btn{border-left:1px solid rgba(245,240,232,.12)}
+.yt-like-btn.on{color:var(--gold-l);background:rgba(196,147,63,.12)}
+@media (max-width:720px){
+  .live-meta{padding:14px}
+  .live-title{font-size:1.05rem}
+  .live-channel-row{flex-direction:column;align-items:flex-start}
+}
 
 /* Live ticker (inside video) */
 .ticker-wrap{position:absolute;left:0;right:0;bottom:0;z-index:9;width:100%;overflow:hidden;background:rgba(0,5,20,.92);padding:10px 0}
@@ -1237,16 +1272,6 @@ body.premium-active .site-footer{background:linear-gradient(180deg,rgba(21,15,9,
       <div class="live-inner">
         <div id="live-video" class="live-video">
           <video id="live-video-el" src="/wIUCcr9vNDIMYYSl6FEF+CY1HZF72_fY.mp4" autoplay muted loop playsinline preload="auto"></video>
-          <div class="live-reactions">
-            <button class="live-react-btn" id="liveLikeBtn" type="button" aria-pressed="false" title="Нравится">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 00-6 0v4H4a2 2 0 00-2 2v7a2 2 0 002 2h8.28a2 2 0 001.94-1.5l1.2-4.8a2 2 0 00-1.94-2.5H14z"/><path d="M20 9h2a2 2 0 012 2v7a2 2 0 01-2 2h-2"/></svg>
-              <span id="liveLikeCount">0</span>
-            </button>
-            <button class="live-react-btn" id="liveDislikeBtn" type="button" aria-pressed="false" title="Не нравится">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 15v4a3 3 0 006 0v-4h4a2 2 0 002-2V6a2 2 0 00-2-2H11.72a2 2 0 00-1.94 1.5l-1.2 4.8A2 2 0 0010.52 13H10z"/><path d="M4 15H2a2 2 0 01-2-2V6a2 2 0 012-2h2"/></svg>
-              <span id="liveDislikeCount">0</span>
-            </button>
-          </div>
           <button class="live-sound-btn" onclick="liveToggleSound()">
             <svg id="live-icon-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
             <svg id="live-icon-sound" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
@@ -1264,6 +1289,44 @@ body.premium-active .site-footer{background:linear-gradient(180deg,rgba(21,15,9,
               <div class="ticker-item"><span class="ticker-arrow"></span><span class="ticker-sys">SYS</span><span class="ticker-text">Здесь могла быть ваша реклама</span></div>
               <div class="ticker-item"><span class="ticker-arrow"></span><span class="ticker-sys">SYS</span><span class="ticker-text">Здесь могла быть ваша реклама</span></div>
               <div class="ticker-item"><span class="ticker-arrow"></span><span class="ticker-sys">SYS</span><span class="ticker-text">Здесь могла быть ваша реклама</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="live-meta">
+          <div class="live-title-row">
+            <div class="live-title" id="liveTitle">Капсула времени — прямой эфир</div>
+            <div class="live-views" id="liveViews">1 248 просмотров • 2 часа назад</div>
+          </div>
+          <div class="live-channel-row">
+            <div class="live-channel-left">
+              <div class="live-chan-avatar" aria-hidden="true"></div>
+              <div class="live-chan-info">
+                <div class="live-chan-name"><span id="liveChannelName">DearFutureMe</span><span class="live-verified" title="Verified">✔</span></div>
+                <div class="live-chan-tag" id="liveChannelTag">Официальный канал</div>
+                <div class="live-chan-sub" id="liveSubCount">12 480 подписчиков</div>
+              </div>
+            </div>
+            <div class="live-channel-right">
+              <div class="live-avatars" id="liveSubAvatars" aria-hidden="true">
+                <span class="live-avatar av1"></span>
+                <span class="live-avatar av2"></span>
+                <span class="live-avatar av3"></span>
+                <span class="live-avatar av4"></span>
+                <span class="live-avatar live-avatar-more">+12</span>
+              </div>
+              <button class="live-sub-btn" id="liveSubBtn" type="button">Подписаться</button>
+            </div>
+          </div>
+          <div class="live-actions">
+            <div class="yt-like-group" role="group" aria-label="Реакции">
+              <button class="yt-like-btn" id="liveLikeBtn" type="button" aria-pressed="false" title="Нравится">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 00-6 0v4H4a2 2 0 00-2 2v7a2 2 0 002 2h8.28a2 2 0 001.94-1.5l1.2-4.8a2 2 0 00-1.94-2.5H14z"/><path d="M20 9h2a2 2 0 012 2v7a2 2 0 01-2 2h-2"/></svg>
+                <span id="liveLikeCount">0</span>
+              </button>
+              <button class="yt-like-btn" id="liveDislikeBtn" type="button" aria-pressed="false" title="Не нравится">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 15v4a3 3 0 006 0v-4h4a2 2 0 002-2V6a2 2 0 00-2-2H11.72a2 2 0 00-1.94 1.5l-1.2 4.8A2 2 0 0010.52 13H10z"/><path d="M4 15H2a2 2 0 01-2-2V6a2 2 0 012-2h2"/></svg>
+                <span id="liveDislikeCount">0</span>
+              </button>
             </div>
           </div>
         </div>
@@ -1983,12 +2046,15 @@ T.en={...T.en,voiceLabel:'Future Voice',voiceStart:'Record voice',voiceStop:'Sto
 T.ru={...T.ru,voiceLabel:'Голос в будущее',voiceStart:'Записать голос',voiceStop:'Стоп',voiceReady:'Запиши голосовое сообщение будущему себе.',voiceReadyDone:'Голосовое сообщение готово.',voiceRecording:'Идёт запись...',voiceStopped:'Запись остановлена.',voiceDenied:'Доступ к микрофону запрещён.',voiceFuture:'Прослушать голос из будущего',adviceLabel:'Совет будущего',adviceBtn:'Спросить будущее',adviceAsk:'Напиши вопрос.',adviceA1:'Будущий ты говорит: держи курс и не усложняй.',adviceA2:'Будущий ты говорит: важное станет ясным позже. Выбирай честный путь.',adviceA3:'Будущий ты говорит: маленькие шаги дают большой результат.',capsList:'Список',capsTimeline:'Таймлайн',capsShelf:'Полка',stormTitle:'Шторм времени',stormText:'Сегодня открывается много капсул. Посмотри новые письма.',mediaLabel:'Фото и видео',mediaPhoto:'Ссылка на фото',mediaVideo:'Ссылка на видео',mediaHint:'Выбери файлы из галереи или вставь ссылки.',mediaHintLocked:'Только Premium: активируй, чтобы добавить фото и видео.',mediaOpenVideo:'Открыть видео',mediaTooLargePhoto:'Фото слишком большое (до 2MB).',mediaTooLargeVideo:'Видео слишком большое (до 8MB).',secretLabel:'Секретная капсула',secretOn:'Секретная капсула: ВКЛ',secretOff:'Секретная капсула: ВЫКЛ',secretHint:'Только ты сможешь открыть капсулу по паролю.',secretHintLocked:'Только Premium: защита капсулы паролем.',secretPasswordHint:'Придумай пароль, который точно запомнишь.',secretPasswordShort:'Пароль минимум 4 символа.',secretBadge:'Секретная',secretPreview:'Секретная капсула',secretLockedPublic:'Секретная капсула',secretOnlyOwner:'Открыть может только автор.',secretUnlock:'Введите пароль для открытия',secretUnlockBtn:'Открыть капсулу',secretPassword:'Пароль',secretInvalid:'Неверный пароль.',emojiLabel:'Выбери эмодзи',emojiHint:'Выбери эмодзи под своё чувство.'};
 T.en={...T.en,huntLabel:'Secret Capsule Hunt',huntOn:'Secret Hunt: ON',huntOff:'Secret Hunt: OFF',huntHint:'Hide your public capsule for others to discover.',huntHintLocked:'Premium only: unlock the hunt mode.',huntBadge:'Hunt',huntPreview:'Hidden capsule. Find to read.',huntDiscover:'Discover',huntPublicOnly:'Secret Hunt requires public visibility.',avatarTitle:'Future Self Avatar',avatarNote:'Generate a future-self avatar based on your name.',avatarLocked:'Premium only: unlock the avatar.',avatarBtn:'Generate avatar',movieTitle:'Memory Movie',movieNote:'A short film of your life timeline.',movieLocked:'Premium only: unlock Memory Movie.',movieBtn:'Generate movie',movieEmpty:'No capsules yet.',movieFallback:'Your story continues.',chatTitle:'Future Conversation',chatNote:'Chat with your future self.',chatLocked:'Premium only: unlock Future Conversation.',chatPlaceholder:'Ask your future self...',chatSend:'Send',chatEmpty:'Say hello to your future self.',chatA1:'Future you says: keep the promise you already know you should keep.',chatA2:'Future you says: love is still your compass.',chatA3:'Future you says: fear fades when you take one clear step.',chatA4:'Future you says: keep going. You will be proud.',shelfTitle:'Shelf <em>of Capsules</em>',shelfTag:'DearFutureMe',shelfSub:'Sealed messages through time',shelfFoot:'✦ Memory Vault ✦',shelfEmpty:'No capsules yet.',shelfRowLabel:'Shelf',shelfAdd:'Add'};
 T.ru={...T.ru,huntLabel:'Секретный поиск капсул',huntOn:'Поиск капсул: ВКЛ',huntOff:'Поиск капсул: ВЫКЛ',huntHint:'Спрячь публичную капсулу, чтобы другие её нашли.',huntHintLocked:'Только Premium: режим поиска капсул.',huntBadge:'Поиск',huntPreview:'Скрытая капсула. Найди и прочитай.',huntDiscover:'Найти',huntPublicOnly:'Режим поиска доступен только для публичных капсул.',avatarTitle:'Аватар будущего себя',avatarNote:'Сгенерируй аватар будущего себя по имени.',avatarLocked:'Только Premium: открой аватар.',avatarBtn:'Создать аватар',movieTitle:'Фильм памяти',movieNote:'Короткий фильм твоей жизненной линии.',movieLocked:'Только Premium: открой фильм памяти.',movieBtn:'Создать фильм',movieEmpty:'Пока нет капсул.',movieFallback:'История продолжается.',chatTitle:'Диалог с будущим собой',chatNote:'Поговори со своим будущим «я».',chatLocked:'Только Premium: открой диалог.',chatPlaceholder:'Спроси своё будущее...',chatSend:'Отправить',chatEmpty:'Скажи привет будущему себе.',chatA1:'Будущий ты говорит: держи обещание, которое ты и так знаешь.',chatA2:'Будущий ты говорит: любовь всё ещё твой компас.',chatA3:'Будущий ты говорит: страх уходит, когда ты делаешь один чёткий шаг.',chatA4:'Будущий ты говорит: продолжай. Ты будешь гордиться собой.',shelfTitle:'Полка <em>Капсул</em>',shelfTag:'DearFutureMe',shelfSub:'Запечатанные послания через время',shelfFoot:'✦ Хранилище Памяти ✦',shelfEmpty:'Пока нет капсул.',shelfRowLabel:'Полка',shelfAdd:'Добавить'};
+T.en={...T.en,liveTitle:'Time Capsule — Live',liveViews:'1,248 views • 2 hours ago',liveChannelName:'DearFutureMe',liveChannelTag:'Official channel',liveSubs:'subscribers',liveSubscribe:'Subscribe',liveSubbed:'Subscribed'};
+T.ru={...T.ru,liveTitle:'Капсула времени — прямой эфир',liveViews:'1 248 просмотров • 2 часа назад',liveChannelName:'DearFutureMe',liveChannelTag:'Официальный канал',liveSubs:'подписчиков',liveSubscribe:'Подписаться',liveSubbed:'Вы подписаны'};
 const RTL_LANGS=new Set(['ar','fa','he']);
 const gt=c=>({...T.en,...(T[c]||{})});
 
 const CAPS=[];
 const SLIDER_SEED=[];
 const TELEGRAM_HANDLE='Frozen_Studio';
+const LIVE_CHANNEL_SUBS=12480;
 
 // STATE
 let lang=localStorage.getItem('dfm_lang')||'ru';
@@ -2020,6 +2086,7 @@ let avatarSeed=0;
 let adviceAnswer='';
 let capsuleStyle='classic';
 let keeperState=null;
+let liveSubbed=localStorage.getItem('dfm_live_sub')==='1';
 
 function getAllCapsules(){
   const items=new Map();
@@ -2283,6 +2350,14 @@ function setToken(token){
 }
 
 function formatStat(value){return Number(value||0).toLocaleString(lang)}
+function updateLiveSubUI(){
+  const t=gt(lang);
+  const btn=document.getElementById('liveSubBtn');
+  if(btn){
+    btn.textContent=liveSubbed?(t.liveSubbed||'Вы подписаны'):(t.liveSubscribe||'Подписаться');
+    btn.classList.toggle('on',liveSubbed);
+  }
+}
 function esc(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 function isValidUserName(name){return /^[A-Za-z][A-Za-z0-9_]{2,19}$/.test(String(name||''))}
 function getPlanFeatures(){
@@ -4274,6 +4349,13 @@ function render(){
   st('hc1',t.c1);st('hc2',t.c2);
   st('hs1',t.s1);st('hs2',t.s2);st('hs3',t.s3);
   stn('stat-sealed',stats.sealed);stn('stat-countries',stats.countries);stn('stat-delivered',stats.delivered);
+  st('liveTitle',t.liveTitle||'Капсула времени — прямой эфир');
+  st('liveViews',t.liveViews||'1 248 просмотров • 2 часа назад');
+  st('liveChannelName',t.liveChannelName||'DearFutureMe');
+  st('liveChannelTag',t.liveChannelTag||'Официальный канал');
+  const liveSubsText=Number(LIVE_CHANNEL_SUBS||0).toLocaleString(lang)+' '+(t.liveSubs||'подписчиков');
+  st('liveSubCount',liveSubsText);
+  updateLiveSubUI();
   s('hfl',t.fl);s('hft',t.ft);
   st('rvlbl',t.reviewsLabel||'Отзывы');
   st('rvttl',t.reviewsTitle||'Отзывы пользователей');
@@ -6738,6 +6820,14 @@ function keeperFallbackReply(){
   var dislikeBtn=document.getElementById('liveDislikeBtn');
   var likeCountEl=document.getElementById('liveLikeCount');
   var dislikeCountEl=document.getElementById('liveDislikeCount');
+  var subBtn=document.getElementById('liveSubBtn');
+  if(subBtn){
+    subBtn.addEventListener('click',function(){
+      liveSubbed=!liveSubbed;
+      localStorage.setItem('dfm_live_sub',liveSubbed?'1':'0');
+      updateLiveSubUI();
+    });
+  }
   var liveState='';
   function applyReacts(data){
     var likes=Number(data?.likes||0);
