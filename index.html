@@ -1999,17 +1999,6 @@ let user=null;
 let caps=[];
 let publicCaps=[];
 let stats={sealed:0,countries:0,delivered:0};
-const DISPLAY_OVERRIDES={
-  sealed:729,
-  countries:34,
-  delivered:5,
-  publicLikeBase:78,
-  publicLikeVariance:9,
-  liveLikeBase:116
-};
-const statOffsets={sealed:0,countries:0,delivered:0};
-const likeOffsets=new Map();
-let liveLikeOffset=null;
 let adminStats={users:0,premiumUsers:0,publicCapsules:0,unusedPromoCodes:0};
 let vis='public',dateMode='1y',authMode='login';
 let pendingReg=null;
@@ -2036,49 +2025,6 @@ function getAllCapsules(){
   const items=new Map();
   [...CAPS,...publicCaps,...caps].forEach(c=>items.set(c.id,c));
   return [...items.values()];
-}
-
-function hashId(str){
-  const s=String(str||'');
-  let h=0;
-  for(let i=0;i<s.length;i++){
-    h=((h<<5)-h)+s.charCodeAt(i);
-    h|=0;
-  }
-  return h>>>0;
-}
-
-function computeStatOffsets(){
-  statOffsets.sealed=Math.max(DISPLAY_OVERRIDES.sealed-Number(stats.sealed||0),0);
-  statOffsets.countries=Math.max(DISPLAY_OVERRIDES.countries-Number(stats.countries||0),0);
-  statOffsets.delivered=Math.max(DISPLAY_OVERRIDES.delivered-Number(stats.delivered||0),0);
-}
-
-function displayStatValue(key,real){
-  const r=Number(real||0);
-  return r+(statOffsets[key]||0);
-}
-
-function getPublicLikeOffset(id,real){
-  const key=String(id||'');
-  if(likeOffsets.has(key))return likeOffsets.get(key);
-  const base=DISPLAY_OVERRIDES.publicLikeBase+(hashId(key)%(DISPLAY_OVERRIDES.publicLikeVariance+1));
-  const offset=Math.max(base-Number(real||0),0);
-  likeOffsets.set(key,offset);
-  return offset;
-}
-
-function displayPublicLikes(c){
-  const real=Number(c?.likes||0);
-  return real+getPublicLikeOffset(c?.id||'',real);
-}
-
-function displayLiveLikes(real){
-  const r=Number(real||0);
-  if(liveLikeOffset===null){
-    liveLikeOffset=Math.max(DISPLAY_OVERRIDES.liveLikeBase-r,0);
-  }
-  return r+liveLikeOffset;
 }
 
 function isOwnCapsule(c){
@@ -4227,10 +4173,7 @@ async function detectLocation(force=false){
     updateLocationUI();
   }
 }
-async function loadStats(){
-  try{stats=await api('/api/stats')}catch(e){stats={sealed:0,countries:0,delivered:0}}
-  computeStatOffsets();
-}
+async function loadStats(){try{stats=await api('/api/stats')}catch(e){stats={sealed:0,countries:0,delivered:0}}}
 async function loadPublicCaps(){
   try{const data=await api('/api/public-capsules');publicCaps=data.capsules||[]}catch(e){publicCaps=[]}
   buildSlider();
@@ -4330,9 +4273,7 @@ function render(){
   s('he',t.ey);s('htitle',t.ti);s('hsub',t.su);
   st('hc1',t.c1);st('hc2',t.c2);
   st('hs1',t.s1);st('hs2',t.s2);st('hs3',t.s3);
-  stn('stat-sealed',displayStatValue('sealed',stats.sealed));
-  stn('stat-countries',displayStatValue('countries',stats.countries));
-  stn('stat-delivered',displayStatValue('delivered',stats.delivered));
+  stn('stat-sealed',stats.sealed);stn('stat-countries',stats.countries);stn('stat-delivered',stats.delivered);
   s('hfl',t.fl);s('hft',t.ft);
   st('rvlbl',t.reviewsLabel||'Отзывы');
   st('rvttl',t.reviewsTitle||'Отзывы пользователей');
@@ -5292,7 +5233,7 @@ function updateLikeUI(id){
     btn.classList.toggle('on',!!c.liked);
   });
   document.querySelectorAll(`[data-like-count="${id}"]`).forEach(el=>{
-    el.textContent=displayPublicLikes(c);
+    el.textContent=Number(c.likes||0);
   });
 }
 
@@ -5924,7 +5865,7 @@ function buildSlider(){
               ? `<button class="sl-cta" type="button" disabled>${t.ownMapButton || 'Недоступно автору'}</button>`
               : `<button class="sl-cta" onclick="openM('${c.id}')">${t.sliderRead || 'Read capsule'}</button>`}
             <button class="sl-like-btn ${c.liked ? 'on' : ''}" data-like-id="${c.id}" onclick="toggleCapsuleLike('${c.id}')">
-              ♥ <span class="sl-like-count" data-like-count="${c.id}">${displayPublicLikes(c)}</span>
+              ♥ <span class="sl-like-count" data-like-count="${c.id}">${Number(c.likes || 0)}</span>
             </button>
           </div>
         </div>
@@ -6802,7 +6743,7 @@ function keeperFallbackReply(){
     var likes=Number(data?.likes||0);
     var dislikes=Number(data?.dislikes||0);
     liveState=String(data?.state||'');
-    if(likeCountEl)likeCountEl.textContent=displayLiveLikes(likes);
+    if(likeCountEl)likeCountEl.textContent=likes;
     if(dislikeCountEl)dislikeCountEl.textContent=dislikes;
     if(likeBtn){ likeBtn.classList.toggle('on',liveState==='like'); likeBtn.setAttribute('aria-pressed',liveState==='like'); }
     if(dislikeBtn){ dislikeBtn.classList.toggle('on',liveState==='dislike'); dislikeBtn.setAttribute('aria-pressed',liveState==='dislike'); }
