@@ -2004,13 +2004,11 @@ const DISPLAY_OVERRIDES={
   countries:34,
   delivered:5,
   publicLikeBase:78,
-  publicLikeVariance:23,
-  publicLikeJitter:7,
+  publicLikeVariance:9,
   liveLikeBase:116
 };
 const statOffsets={sealed:0,countries:0,delivered:0};
 const likeOffsets=new Map();
-const usedLikeDisplays=new Map();
 let liveLikeOffset=null;
 let adminStats={users:0,premiumUsers:0,publicCapsules:0,unusedPromoCodes:0};
 let vis='public',dateMode='1y',authMode='login';
@@ -2064,19 +2062,8 @@ function displayStatValue(key,real){
 function getPublicLikeOffset(id,real){
   const key=String(id||'');
   if(likeOffsets.has(key))return likeOffsets.get(key);
-  const h=hashId(key);
-  const base=DISPLAY_OVERRIDES.publicLikeBase
-    +(h%DISPLAY_OVERRIDES.publicLikeVariance)
-    +((h>>7)%DISPLAY_OVERRIDES.publicLikeJitter);
-  let offset=Math.max(base-Number(real||0),0);
-  let display=Number(real||0)+offset;
-  if(usedLikeDisplays.has(display)&&usedLikeDisplays.get(display)!==key){
-    let bump=1;
-    while(usedLikeDisplays.has(display+bump))bump++;
-    offset+=bump;
-    display+=bump;
-  }
-  usedLikeDisplays.set(display,key);
+  const base=DISPLAY_OVERRIDES.publicLikeBase+(hashId(key)%(DISPLAY_OVERRIDES.publicLikeVariance+1));
+  const offset=Math.max(base-Number(real||0),0);
   likeOffsets.set(key,offset);
   return offset;
 }
