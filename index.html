@@ -2057,6 +2057,7 @@ const TELEGRAM_HANDLE='Frozen_Studio';
 const LIVE_CHANNEL_SUBS=46;
 const LIVE_LIKE_BASE=19;
 const LIVE_VIEW_COUNT=116;
+const LIVE_GUEST_KEY='dfm_live_guest';
 
 // STATE
 let lang=localStorage.getItem('dfm_lang')||'ru';
@@ -2089,6 +2090,12 @@ let adviceAnswer='';
 let capsuleStyle='classic';
 let keeperState=null;
 let liveSubbed=localStorage.getItem('dfm_live_sub')==='1';
+let liveGuestId=localStorage.getItem(LIVE_GUEST_KEY)||'';
+let liveLikeOffset=null;
+if(!liveGuestId){
+  liveGuestId='g'+Math.random().toString(36).slice(2)+Date.now().toString(36);
+  localStorage.setItem(LIVE_GUEST_KEY,liveGuestId);
+}
 
 function getAllCapsules(){
   const items=new Map();
@@ -2330,6 +2337,7 @@ async function api(url,opts={}){
   const headers={...(opts.headers||{})};
   if(!headers['Content-Type']&&opts.body)headers['Content-Type']='application/json';
   if(authToken)headers.Authorization=`Bearer ${authToken}`;
+  if(url.startsWith('/api/live/'))headers['X-Guest-Id']=liveGuestId;
   const controller=new AbortController();
   const timeoutId=setTimeout(()=>controller.abort(),12000);
   try{
@@ -2358,6 +2366,11 @@ function updateLiveSubUI(){
   if(btn){
     btn.textContent=liveSubbed?(t.liveSubbed||'Вы подписаны'):(t.liveSubscribe||'Подписаться');
     btn.classList.toggle('on',liveSubbed);
+  }
+  const subEl=document.getElementById('liveSubCount');
+  if(subEl){
+    const total=Number(LIVE_CHANNEL_SUBS||0)+(liveSubbed?1:0);
+    subEl.textContent=total.toLocaleString(lang)+' '+(t.liveSubs||'подписчиков');
   }
 }
 function esc(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
@@ -4356,8 +4369,6 @@ function render(){
   st('liveViews',liveViewsText);
   st('liveChannelName',t.liveChannelName||'DearFutureMe');
   st('liveChannelTag',t.liveChannelTag||'Официальный канал');
-  const liveSubsText=Number(LIVE_CHANNEL_SUBS||0).toLocaleString(lang)+' '+(t.liveSubs||'подписчиков');
-  st('liveSubCount',liveSubsText);
   updateLiveSubUI();
   s('hfl',t.fl);s('hft',t.ft);
   st('rvlbl',t.reviewsLabel||'Отзывы');
@@ -6836,7 +6847,10 @@ function keeperFallbackReply(){
     var likes=Number(data?.likes||0);
     var dislikes=Number(data?.dislikes||0);
     liveState=String(data?.state||'');
-    if(likeCountEl)likeCountEl.textContent=Math.max(likes,LIVE_LIKE_BASE);
+    if(liveLikeOffset===null){
+      liveLikeOffset=Math.max(LIVE_LIKE_BASE-likes,0);
+    }
+    if(likeCountEl)likeCountEl.textContent=likes+liveLikeOffset;
     if(dislikeCountEl)dislikeCountEl.textContent=dislikes;
     if(likeBtn){ likeBtn.classList.toggle('on',liveState==='like'); likeBtn.setAttribute('aria-pressed',liveState==='like'); }
     if(dislikeBtn){ dislikeBtn.classList.toggle('on',liveState==='dislike'); dislikeBtn.setAttribute('aria-pressed',liveState==='dislike'); }
@@ -6858,12 +6872,10 @@ function keeperFallbackReply(){
     }
   }
   if(likeBtn)likeBtn.addEventListener('click',function(){
-    if(!authToken){ showToast('!',(gt(lang).loginRequired||'Войдите, чтобы ставить реакцию.')); return; }
     if(liveState==='like')return;
     sendReact('like');
   });
   if(dislikeBtn)dislikeBtn.addEventListener('click',function(){
-    if(!authToken){ showToast('!',(gt(lang).loginRequired||'Войдите, чтобы ставить реакцию.')); return; }
     if(liveState==='dislike')return;
     sendReact('dislike');
   });

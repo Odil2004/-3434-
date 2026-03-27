@@ -789,6 +789,14 @@ function getLiveReactions(store) {
   return store.liveReactions;
 }
 
+function getGuestId(req) {
+  const raw = String(req.headers["x-guest-id"] || "");
+  if (!raw) return "";
+  if (raw.length > 80) return "";
+  if (!/^[a-zA-Z0-9_-]+$/.test(raw)) return "";
+  return raw;
+}
+
 function recordAiUsage(store, entry) {
   const usage = getAiUsage(store);
   usage.logs.push(entry);
@@ -2099,19 +2107,33 @@ app.get("/api/stats", async (_req, res) => {
 app.get("/api/live/reactions", authOptional, async (req, res) => {
   const store = await readStore();
   const live = getLiveReactions(store);
-  const userState = req.user ? (live.users[req.user.id] || "") : "";
+  const guestId = getGuestId(req);
+  const key = req.user
+    ? `u:${req.user.id}`
+    : guestId
+    ? `g:${guestId}`
+    : "";
+  const userState = key ? live.users[key] || "" : "";
   res.json({ likes: live.likes, dislikes: live.dislikes, state: userState });
 });
 
-app.post("/api/live/reaction", authRequired, async (req, res) => {
+app.post("/api/live/reaction", authOptional, async (req, res) => {
   const reaction = String(req.body.reaction || "").toLowerCase();
   if (!["like", "dislike", "clear"].includes(reaction)) {
     return res.status(400).json({ error: "Invalid reaction" });
   }
+  const guestId = getGuestId(req);
+  const userKey = req.user
+    ? `u:${req.user.id}`
+    : guestId
+    ? `g:${guestId}`
+    : "";
+  if (!userKey) {
+    return res.status(401).json({ error: "Auth required" });
+  }
   const store = await readStore();
   const live = getLiveReactions(store);
-  const userId = req.user.id;
-  const prev = live.users[userId] || "";
+  const prev = live.users[userKey] || "";
   let likes = Number(live.likes || 0);
   let dislikes = Number(live.dislikes || 0);
 
@@ -2127,8 +2149,8 @@ app.post("/api/live/reaction", authRequired, async (req, res) => {
     next = "dislike";
   }
 
-  if (next) live.users[userId] = next;
-  else delete live.users[userId];
+  if (next) live.users[userKey] = next;
+  else delete live.users[userKey];
 
   live.likes = likes;
   live.dislikes = dislikes;
