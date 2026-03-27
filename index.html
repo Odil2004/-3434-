@@ -2009,7 +2009,6 @@ const DISPLAY_OVERRIDES={
   liveLikeBase:116
 };
 const statOffsets={sealed:0,countries:0,delivered:0};
-let statOffsetsLocked=false;
 const likeOffsets=new Map();
 const usedLikeDisplays=new Map();
 let liveLikeOffset=null;
@@ -2052,11 +2051,9 @@ function hashId(str){
 }
 
 function computeStatOffsets(){
-  if(statOffsetsLocked) return;
   statOffsets.sealed=Math.max(DISPLAY_OVERRIDES.sealed-Number(stats.sealed||0),0);
   statOffsets.countries=Math.max(DISPLAY_OVERRIDES.countries-Number(stats.countries||0),0);
   statOffsets.delivered=Math.max(DISPLAY_OVERRIDES.delivered-Number(stats.delivered||0),0);
-  statOffsetsLocked=true;
 }
 
 function displayStatValue(key,real){
@@ -4244,12 +4241,8 @@ async function detectLocation(force=false){
   }
 }
 async function loadStats(){
-  try{
-    stats=await api('/api/stats');
-    computeStatOffsets();
-  }catch(e){
-    stats={sealed:0,countries:0,delivered:0};
-  }
+  try{stats=await api('/api/stats')}catch(e){stats={sealed:0,countries:0,delivered:0}}
+  computeStatOffsets();
 }
 async function loadPublicCaps(){
   try{const data=await api('/api/public-capsules');publicCaps=data.capsules||[]}catch(e){publicCaps=[]}
